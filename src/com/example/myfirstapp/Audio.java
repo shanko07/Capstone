@@ -14,6 +14,9 @@ import android.widget.Toast;
 /*
  * Thread to manage live recording/playback of voice input from the device's microphone.
  */
+
+// use following link to build a wav reader and do testing between here and matlab
+//http://web.archive.org/web/20120531113946/http://www.builogic.com/java/javasound-read-write.html
 public class Audio extends Thread
 { 
     private boolean stopped = false;
@@ -71,8 +74,8 @@ public class Audio extends Thread
                 
                 
                 
-                
-                mainHandler.obtainMessage(N, data).sendToTarget();
+                mainHandler.obtainMessage(1, N, -1, buffer).sendToTarget(); //what is 1
+                mainHandler.obtainMessage(0, data).sendToTarget(); //what is 0 
                 
             }
         }

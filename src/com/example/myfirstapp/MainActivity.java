@@ -34,7 +34,7 @@ import com.jjoe64.graphview.GraphViewSeries;
 import com.jjoe64.graphview.LineGraphView;
 
 
-
+import java.math.*;
 
 
 
@@ -49,6 +49,19 @@ public class MainActivity extends Activity {
 */
 	
 	protected float[] fftResults;
+	protected short[] timeDomain;
+	float zeroCrossingRate;
+	float rmsAmplitude;
+	float [] prevSpectrum;
+	float [] spectrum; // entire spectrum
+	float []RHSspectrum; //absolute value of fft
+	float totalEnergy; //total energy of the signal
+	int below91; //bins below which 91 percent of signal energy is contained
+	float spectralRolloff;
+	float spectralCentroid;
+	float spectralEntropy;
+	float spectralFlux;
+	int N;
 	GraphViewSeries exampleSeries;
 	GraphView graphView;	
 	GraphViewData[] gViewData;
@@ -58,102 +71,162 @@ public class MainActivity extends Activity {
 	    @Override
 	    public void handleMessage(Message msg) {
 	    
-	    	int bins = 160;
-	    	int perbin = 1;
-	    	int sampfreq = 44100;
+	    	switch (msg.what){
+	    	
+	    	case 0:
+	    	prevSpectrum = spectrum;
 	    	
 	    	fftResults = (float[]) msg.obj;
-	    	int N = msg.what;
-	    	//gViewData = new GraphViewData[fftResults.length];
-	    	gViewData = new GraphViewData[bins];
-	    	float[] temp = new float[bins];
 	    	
-	    	/*
-	    	Context context = getApplicationContext();
-	    	CharSequence text = Integer.toString(fftResults.length);
-	    	int duration = Toast.LENGTH_SHORT;
+	    	RHSspectrum = new float[fftResults.length];
+	    	for(int i=0; i<fftResults.length; i++)
+	    	{
+	    		RHSspectrum[i] = Math.abs(fftResults[i]);
+	    	}
+	    	// making spectrum array
+	    	spectrum = new float [fftResults.length * 2];
+	    	for(int i=0; i<fftResults.length; i++)
+	    	{
+	    		spectrum[fftResults.length+i] = Math.abs(fftResults[i]);
+	    		spectrum[fftResults.length-i] = Math.abs(fftResults[i]);
+	    	}    	
+	    	//-------------
+	    	
+	    	
+	    	
+	    	
+	    	for(int i=0; i<RHSspectrum.length; i++)
+	    	{
+	    		totalEnergy += RHSspectrum[i]*RHSspectrum[i];
+	    	}
+	    	totalEnergy *= 2;
+	    	
+	    	below91 = 0;
+	    	float runningSum = 0;
+	    	for(;below91<RHSspectrum.length;below91++)
+	    	{
+	    		runningSum += RHSspectrum[below91]*RHSspectrum[below91];
+	    		if(runningSum*2/totalEnergy >= .91)
+	    		{
+	    			break;
+	    		}
+	    	}
+	    	
+	    	
+	    	break;
+	    	
+	    	
+	    	case 1:
+	    		
+	    		timeDomain = (short[]) msg.obj;
+	    		N = msg.arg1;
+	    		
+	    		calculateZeroCrossing();  // gets the zero crossing rate
+	    		calculateRMSAmplitude();  // gets the RMS amplitude
+	    		
+	    		break;
+	    	
+	    	default:
+	    		System.out.println("Error not 0 or 1");
+	    	
+	    	}
+	    
+	    
+	    }
 
-	    	Toast toast = Toast.makeText(context, text, duration);
-	    	toast.show();
-	    	*/
-	    	
-	    	
-	    	
-	    /*	
-	    for(int i = 0; i < fftResults.length; i++)
-	    {
-	    	gViewData[i] = new GraphViewData((8000/160)*i, fftResults[i]);
-	    }
-	    */
-	    	float max = 0;
-	    	float min = 0;
-	    	
-	    	for(int i = 0; i < bins; i++)
-		    {
-	    		float sum = 0;
-	    		for(int j = 0; j < perbin; j++)
-	    		{
-	    			sum += Math.abs(fftResults[perbin*i+j]);
-	    		}
-		    	//gViewData[i] = new GraphViewData(1000*(i+1), sum/20);
-	    		temp[i] = sum/perbin;
-		    }
-	    	
-	    	
-	    	//finding min and max
-	    	for(int i = 0; i < bins; i++)
-	    	{
-	    		if(temp[i] > max)
-	    		{
-	    			max = temp[i];
-	    		}
-	    		if(temp[i] < min)
-	    		{
-	    			min = temp[i];
-	    		}
-	    	}
-	    	
-	    	//fixing the values between 0 and 10 for viewing purposes
-	    	float x = (max-min)/10;
-	    	
-	    	float[] newtemp = new float[bins];
-	    	
-	    	for(int i = 0; i < bins; i++)
-	    	{
-	    		newtemp[i] = (temp[i]/x);
-	    		//newtemp[i] = (float) (20*Math.log10(temp[i]));
-	    	}
-	    	
-	    	min = 0;
-	    	
-	    	
-	    	//finding min of new set
-	    	for(int i = 0; i < bins; i++)
-	    	{
-	    		if(newtemp[i] < min)
-	    		{
-	    			min = newtemp[i];
-	    		}
-	    	}
-	    	
-	    	
-	    	float y = 0-min;
-	    	
-	    	
-	    	
-	    	for(int i = 0; i < bins; i++)
-	    	{
-	    		gViewData[i] = new GraphViewData((sampfreq/bins)*(i+1)/2, (newtemp[i]+y));
-	    		//gViewData[i] = new GraphViewData((sampfreq/bins)*(i+1)/2, (newtemp[i]));
-	    	}
-	    	
-	    
-	    exampleSeries.resetData(gViewData);
-	    
-	    
-	    }
+		
 	};
 	   
+	private void calculateZeroCrossing() 
+	{
+	int zeroCrossings = 0;
+	
+	for(int i=0; i<timeDomain.length-1; i++)
+	{
+		if(timeDomain[i] > 0 && timeDomain[i+1] < 0)
+		{
+			zeroCrossings++;
+		}
+		if(timeDomain[i] < 0 && timeDomain[i+1] > 0)
+		{
+			zeroCrossings++;
+		}
+	}
+	
+	zeroCrossingRate = zeroCrossings/N;
+	}
+	
+	
+	private void calculateRMSAmplitude() {
+		rmsAmplitude = 0;
+		float sum = 0;
+		for(int i=0; i<timeDomain.length; i++){
+			sum += timeDomain[i]*timeDomain[i];
+		}
+		sum/=N;
+		rmsAmplitude = (float) Math.sqrt(sum);
+	}
+	
+	
+	private void calculateSpectralRolloff()
+	{
+		spectralRolloff = below91*44100/RHSspectrum.length;
+	}
+	
+	private void calculateSpectralCentroid()
+	{
+		float []RHSSpectNum = new float [RHSspectrum.length];
+		for(int i=0;i<RHSspectrum.length;i++){
+			RHSSpectNum[i] = RHSspectrum[i] * i;
+		}
+		float sumN = 0;
+		for(int i=0;i<RHSSpectNum.length;i++){
+			sumN += RHSSpectNum[i];
+		}
+		float sumD = 0;
+		for(int i=0;i<RHSspectrum.length;i++){
+			sumD += RHSspectrum[i];
+		}
+		float divide = sumN/ sumD;
+		
+		// fs = 44100 ------------------------------
+		
+		spectralCentroid = 44100 / RHSspectrum.length * divide;
+		
+	}
+	
+	private void calculateSpectralEntropy(){
+		float [] PSD = new float [spectrum.length];
+		for(int i=0;i<spectrum.length;i++){
+			PSD[i] = spectrum[i] * spectrum[i] / totalEnergy;
+		}
+		float [] PSDmultLog = new float [PSD.length];
+		for(int i = 0; i<PSDmultLog.length;i++){
+			PSDmultLog[i] = (float) Math.log(PSD[i]) / (float) Math.log(2) * (float) PSD[i];
+		}
+		float sum = 0;
+		for(int i = 0; i<PSDmultLog.length;i++){
+			sum += PSDmultLog[i];
+		}
+		sum = sum * -1;
+		spectralEntropy = sum;	
+		
+	}
+	
+	private void calculateSpectralFlux(){
+		float [] diff = new float [spectrum.length];
+		for (int i=0;i<diff.length;i++){
+			diff[i] = spectrum[i] - prevSpectrum[i];
+		}
+		float sqSum = 0;
+		for (int i=0;i<diff.length;i++){
+			sqSum += diff[i] * diff[i];
+		}
+		spectralFlux = (float) Math.sqrt(sqSum); 
+	}
+	
+	
+	
 	    
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
@@ -365,3 +438,100 @@ public class MainActivity extends Activity {
 	
 
 }
+
+
+/*
+int bins = 160;
+int perbin = 1;
+int sampfreq = 44100;
+
+
+int N = msg.what;
+//gViewData = new GraphViewData[fftResults.length];
+gViewData = new GraphViewData[bins];
+float[] temp = new float[bins];
+
+/*
+Context context = getApplicationContext();
+CharSequence text = Integer.toString(fftResults.length);
+int duration = Toast.LENGTH_SHORT;
+
+Toast toast = Toast.makeText(context, text, duration);
+toast.show();
+*/
+
+
+
+/*	
+for(int i = 0; i < fftResults.length; i++)
+{
+gViewData[i] = new GraphViewData((8000/160)*i, fftResults[i]);
+}
+*/
+
+/*
+float max = 0;
+float min = 0;
+
+for(int i = 0; i < bins; i++)
+{
+	float sum = 0;
+	for(int j = 0; j < perbin; j++)
+	{
+		sum += Math.abs(fftResults[perbin*i+j]);
+	}
+	//gViewData[i] = new GraphViewData(1000*(i+1), sum/20);
+	temp[i] = sum/perbin;
+}
+
+
+//finding min and max
+for(int i = 0; i < bins; i++)
+{
+	if(temp[i] > max)
+	{
+		max = temp[i];
+	}
+	if(temp[i] < min)
+	{
+		min = temp[i];
+	}
+}
+
+//fixing the values between 0 and 10 for viewing purposes
+float x = (max-min)/10;
+
+float[] newtemp = new float[bins];
+
+for(int i = 0; i < bins; i++)
+{
+	newtemp[i] = (temp[i]/x);
+	//newtemp[i] = (float) (20*Math.log10(temp[i]));
+}
+
+min = 0;
+
+
+//finding min of new set
+for(int i = 0; i < bins; i++)
+{
+	if(newtemp[i] < min)
+	{
+		min = newtemp[i];
+	}
+}
+
+
+float y = 0-min;
+
+
+
+for(int i = 0; i < bins; i++)
+{
+	gViewData[i] = new GraphViewData((sampfreq/bins)*(i+1)/2, (newtemp[i]+y));
+	//gViewData[i] = new GraphViewData((sampfreq/bins)*(i+1)/2, (newtemp[i]));
+}
+
+
+exampleSeries.resetData(gViewData);
+*/
