@@ -11,8 +11,11 @@ import android.view.Menu;
 
 import android.app.Activity;
 import android.widget.LinearLayout;
+import android.widget.Toast;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.view.View;
@@ -23,6 +26,12 @@ import android.media.MediaRecorder;
 import android.media.MediaPlayer;
 
 import java.io.IOException;
+
+import com.jjoe64.graphview.BarGraphView;
+import com.jjoe64.graphview.GraphView;
+import com.jjoe64.graphview.GraphView.GraphViewData;
+import com.jjoe64.graphview.GraphViewSeries;
+import com.jjoe64.graphview.LineGraphView;
 
 
 
@@ -38,6 +47,114 @@ public class MainActivity extends Activity {
 	}
 
 */
+	
+	protected float[] fftResults;
+	GraphViewSeries exampleSeries;
+	GraphView graphView;	
+	GraphViewData[] gViewData;
+	
+	
+	private final Handler mHandler = new Handler() {
+	    @Override
+	    public void handleMessage(Message msg) {
+	    
+	    	int bins = 160;
+	    	int perbin = 1;
+	    	int sampfreq = 44100;
+	    	
+	    	fftResults = (float[]) msg.obj;
+	    	int N = msg.what;
+	    	//gViewData = new GraphViewData[fftResults.length];
+	    	gViewData = new GraphViewData[bins];
+	    	float[] temp = new float[bins];
+	    	
+	    	/*
+	    	Context context = getApplicationContext();
+	    	CharSequence text = Integer.toString(fftResults.length);
+	    	int duration = Toast.LENGTH_SHORT;
+
+	    	Toast toast = Toast.makeText(context, text, duration);
+	    	toast.show();
+	    	*/
+	    	
+	    	
+	    	
+	    /*	
+	    for(int i = 0; i < fftResults.length; i++)
+	    {
+	    	gViewData[i] = new GraphViewData((8000/160)*i, fftResults[i]);
+	    }
+	    */
+	    	float max = 0;
+	    	float min = 0;
+	    	
+	    	for(int i = 0; i < bins; i++)
+		    {
+	    		float sum = 0;
+	    		for(int j = 0; j < perbin; j++)
+	    		{
+	    			sum += Math.abs(fftResults[perbin*i+j]);
+	    		}
+		    	//gViewData[i] = new GraphViewData(1000*(i+1), sum/20);
+	    		temp[i] = sum/perbin;
+		    }
+	    	
+	    	
+	    	//finding min and max
+	    	for(int i = 0; i < bins; i++)
+	    	{
+	    		if(temp[i] > max)
+	    		{
+	    			max = temp[i];
+	    		}
+	    		if(temp[i] < min)
+	    		{
+	    			min = temp[i];
+	    		}
+	    	}
+	    	
+	    	//fixing the values between 0 and 10 for viewing purposes
+	    	float x = (max-min)/10;
+	    	
+	    	float[] newtemp = new float[bins];
+	    	
+	    	for(int i = 0; i < bins; i++)
+	    	{
+	    		newtemp[i] = (temp[i]/x);
+	    		//newtemp[i] = (float) (20*Math.log10(temp[i]));
+	    	}
+	    	
+	    	min = 0;
+	    	
+	    	
+	    	//finding min of new set
+	    	for(int i = 0; i < bins; i++)
+	    	{
+	    		if(newtemp[i] < min)
+	    		{
+	    			min = newtemp[i];
+	    		}
+	    	}
+	    	
+	    	
+	    	float y = 0-min;
+	    	
+	    	
+	    	
+	    	for(int i = 0; i < bins; i++)
+	    	{
+	    		gViewData[i] = new GraphViewData((sampfreq/bins)*(i+1)/2, (newtemp[i]+y));
+	    		//gViewData[i] = new GraphViewData((sampfreq/bins)*(i+1)/2, (newtemp[i]));
+	    	}
+	    	
+	    
+	    exampleSeries.resetData(gViewData);
+	    
+	    
+	    }
+	};
+	   
+	    
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		// Inflate the menu; this adds items to the action bar if it is present.
@@ -166,14 +283,14 @@ public class MainActivity extends Activity {
 
     @Override
     public void onCreate(Bundle icicle) {
-        super.onCreate(icicle);
-        
-        
+        super.onCreate(icicle);     
+               
         // Call thread
-        Audio a1 = new Audio();
+        Audio a1 = new Audio(mHandler);
         
 
         LinearLayout ll = new LinearLayout(this);
+        /*
         mRecordButton = new RecordButton(this);
         ll.addView(mRecordButton,
             new LinearLayout.LayoutParams(
@@ -187,6 +304,42 @@ public class MainActivity extends Activity {
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 0));
         setContentView(ll);
+        
+        
+        */
+        
+     // init example series data
+        exampleSeries = new GraphViewSeries(new GraphViewData[] {
+              new GraphViewData(1, 2.0d)
+              , new GraphViewData(2, 1.5d)
+              , new GraphViewData(3, 2.5d)
+              , new GraphViewData(4, 1.0d)
+        });
+        
+        Log.d("123", "alpha");
+        
+        GraphView graphView = new BarGraphView(
+              this // context
+              , "GraphViewDemo" // heading
+        );
+        
+        Log.d("123", "beta");
+        
+        graphView.addSeries(exampleSeries); // data
+        
+        Log.d("123", "gamma");
+         
+        LinearLayout layout = (LinearLayout) findViewById(R.id.barGraph);
+        
+        Log.d("123", "delta");
+        ll.addView(graphView);
+        
+        Log.d("123", "epsilon");
+        
+        setContentView(ll);
+        
+        
+        
     }
 
     @Override

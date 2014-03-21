@@ -1,11 +1,15 @@
 package com.example.myfirstapp;
 
+import edu.emory.mathcs.jtransforms.fft.FloatFFT_1D;
+import android.content.Context;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.AudioTrack;
 import android.media.MediaRecorder.AudioSource;
+import android.os.Handler;
 import android.util.Log;
+import android.widget.Toast;
 
 /*
  * Thread to manage live recording/playback of voice input from the device's microphone.
@@ -13,12 +17,14 @@ import android.util.Log;
 public class Audio extends Thread
 { 
     private boolean stopped = false;
+    private Handler mainHandler;
 
     /**
      * Give the thread high priority so that it's not canceled unexpectedly, and start it
      */
-    public Audio()
+    public Audio(Handler mhandler)
     { 
+    	mainHandler = mhandler;
         android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO);
         start();
     }
@@ -38,9 +44,10 @@ public class Audio extends Thread
          */
         try
         {
-            int N = AudioRecord.getMinBufferSize(8000,AudioFormat.CHANNEL_IN_MONO,AudioFormat.ENCODING_PCM_16BIT);
-            recorder = new AudioRecord(AudioSource.MIC, 8000, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, N*10);
-            track = new AudioTrack(AudioManager.STREAM_MUSIC, 8000, 
+        	int sampRate = 44100;
+            int N = AudioRecord.getMinBufferSize(sampRate,AudioFormat.CHANNEL_IN_MONO,AudioFormat.ENCODING_PCM_16BIT);
+            recorder = new AudioRecord(AudioSource.MIC, sampRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, N*10);
+            track = new AudioTrack(AudioManager.STREAM_MUSIC, sampRate, 
                     AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT, N*10, AudioTrack.MODE_STREAM);
             recorder.startRecording();
             track.play();
@@ -54,6 +61,19 @@ public class Audio extends Thread
                 short[] buffer = buffers[ix++ % buffers.length];
                 N = recorder.read(buffer,0,buffer.length);
                 track.write(buffer, 0, buffer.length);
+                
+                //IMPLEMENT FFT HERE
+                FloatFFT_1D myFFT = new FloatFFT_1D(N);
+                float[] data = convertFloat(buffer);
+                myFFT.realForward(data);
+                Log.i("Map", "fft successful");
+                
+                
+                
+                
+                
+                mainHandler.obtainMessage(N, data).sendToTarget();
+                
             }
         }
         catch(Throwable x)
@@ -78,6 +98,16 @@ public class Audio extends Thread
     private void close()
     { 
          stopped = true;
+    }
+    
+    private float[] convertFloat(short[] input)
+    {
+    	float[] output = new float[input.length];
+    	for(int i = 0; i < input.length; i++)
+    	{
+    		output[i] = (float) input[i];
+    	}
+    	return output;
     }
 
 }
