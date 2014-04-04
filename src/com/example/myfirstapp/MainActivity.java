@@ -358,7 +358,6 @@ public class MainActivity extends Activity {
     public void onCreate(Bundle icicle) {
         super.onCreate(icicle);     
                
-        // Call thread
         Audio a1 = new Audio(mHandler);
         
 
