@@ -49,7 +49,7 @@ public class MainActivity extends Activity {
 */
 	
 	protected float[] fftResults;
-	protected short[] timeDomain;
+	protected float[] timeDomain;
 	float zeroCrossingRate;
 	float rmsAmplitude;
 	float [] prevSpectrum;
@@ -57,6 +57,7 @@ public class MainActivity extends Activity {
 	float []RHSspectrum; //absolute value of fft
 	float totalEnergy; //total energy of the signal
 	int below91; //bins below which 91 percent of signal energy is contained
+	float runningSum;
 	float spectralRolloff;
 	float spectralCentroid;
 	float spectralEntropy;
@@ -74,43 +75,56 @@ public class MainActivity extends Activity {
 	    	switch (msg.what){
 	    	
 	    	case 0:
-	    	prevSpectrum = spectrum;
+	    		
+	    		//Log.d("feature", "case 0");
+	    		
+	    		if(spectrum!=null)
+	    		{
+	    			prevSpectrum = spectrum;	    			
+	    		}
 	    	
-	    	fftResults = (float[]) msg.obj;
+	    	spectrum = (float[]) msg.obj;  //Acquire spectrum
 	    	
-	    	RHSspectrum = new float[fftResults.length];
-	    	for(int i=0; i<fftResults.length; i++)
+	    	totalEnergy = 0;
+	    	for(int i=0; i<spectrum.length; i++)  //calculate total energy
 	    	{
-	    		RHSspectrum[i] = Math.abs(fftResults[i]);
+	    		totalEnergy += spectrum[i]*spectrum[i];
 	    	}
-	    	// making spectrum array
-	    	spectrum = new float [fftResults.length * 2];
-	    	for(int i=0; i<fftResults.length; i++)
+	    	//Log.d("SPR Debug", "totalEnergy: " + Float.toString(totalEnergy));
+	    	
+	    	
+	    	RHSspectrum = new float[spectrum.length/2];   //create RHSspectrum
+	    	for(int i=0; i<spectrum.length/2; i++)
 	    	{
-	    		spectrum[fftResults.length+i] = Math.abs(fftResults[i]);
-	    		spectrum[fftResults.length-i] = Math.abs(fftResults[i]);
-	    	}    	
-	    	//-------------
-	    	
-	    	
-	    	
-	    	
-	    	for(int i=0; i<RHSspectrum.length; i++)
-	    	{
-	    		totalEnergy += RHSspectrum[i]*RHSspectrum[i];
-	    	}
-	    	totalEnergy *= 2;
+	    		RHSspectrum[i] = spectrum[i];
+	    		//Log.d("SPR Debug", "RHSspectrum: " + Float.toString(RHSspectrum[i]));
+	    	}	    	
+
 	    	
 	    	below91 = 0;
-	    	float runningSum = 0;
-	    	for(;below91<RHSspectrum.length;below91++)
+	    	runningSum = 0;
+	    	for(int i=0;i<RHSspectrum.length;i++)
 	    	{
-	    		runningSum += RHSspectrum[below91]*RHSspectrum[below91];
-	    		if(runningSum*2/totalEnergy >= .91)
+	    		runningSum += RHSspectrum[i]*RHSspectrum[i];
+	    		Log.d("SPR Debug", "runningSum: " + Float.toString(runningSum));
+	    		Log.d("SPR Debug", "i: " + Integer.toString(i));
+	    		//Log.d("SPR Debug", "totalEnergy: " + Float.toString(totalEnergy));
+	    		if((runningSum*2)/totalEnergy >= .91)
 	    		{
-	    			break;
+	    			//Log.d("feature", "runningSum: " + Float.toString(runningSum));
+	    			//Log.d("feature", "totalEnergy: " + Float.toString(totalEnergy));
+	    			below91=i;
+	    			i=RHSspectrum.length;
+	    			Log.d("SPR Debug", "below91: " + Integer.toString(below91));
 	    		}
 	    	}
+	    	
+	    	
+	    	
+	    	calculateSpectralRolloff();
+	    	calculateSpectralCentroid();
+	    	calculateSpectralEntropy();
+	    	calculateSpectralFlux();
 	    	
 	    	
 	    	break;
@@ -118,16 +132,21 @@ public class MainActivity extends Activity {
 	    	
 	    	case 1:
 	    		
-	    		timeDomain = (short[]) msg.obj;
+	    		//Log.d("feature", "case 1");
+	    		
+	    		timeDomain = (float[]) msg.obj;
+	    		//Log.d("feature", "after td assignment");
 	    		N = msg.arg1;
 	    		
-	    		calculateZeroCrossing();  // gets the zero crossing rate
+	    		
 	    		calculateRMSAmplitude();  // gets the RMS amplitude
+	    		calculateZeroCrossing();  // gets the zero crossing rate
+	    		
 	    		
 	    		break;
 	    	
 	    	default:
-	    		System.out.println("Error not 0 or 1");
+	    		//Log.d("feature", "Error not 0 or 1");
 	    	
 	    	}
 	    
@@ -143,6 +162,8 @@ public class MainActivity extends Activity {
 	
 	for(int i=0; i<timeDomain.length-1; i++)
 	{
+		//Log.d("TD", Float.toString(timeDomain[i]));
+		//Log.d("TD", Float.toString(timeDomain[i]));
 		if(timeDomain[i] > 0 && timeDomain[i+1] < 0)
 		{
 			zeroCrossings++;
@@ -151,9 +172,14 @@ public class MainActivity extends Activity {
 		{
 			zeroCrossings++;
 		}
+		//Log.d("TD", Integer.toString(zeroCrossings));
 	}
 	
-	zeroCrossingRate = zeroCrossings/N;
+	//zeroCrossingRate = zeroCrossings/N;
+	zeroCrossingRate = zeroCrossings;
+	
+	Log.d("feature", "ZCR: " + Float.toString(zeroCrossingRate));
+	
 	}
 	
 	
@@ -165,19 +191,25 @@ public class MainActivity extends Activity {
 		}
 		sum/=N;
 		rmsAmplitude = (float) Math.sqrt(sum);
+		
+		Log.d("feature", "RMS: " + Float.toString(rmsAmplitude));
+		
 	}
 	
 	
-	private void calculateSpectralRolloff()
+	private void calculateSpectralRolloff() //Erroneous in all cases
 	{
-		spectralRolloff = below91*44100/RHSspectrum.length;
+		spectralRolloff = (float) ((below91+1)*44100.0/spectrum.length);
+		
+		Log.d("feature", "SPR: " + Float.toString(spectralRolloff));
+		
 	}
 	
-	private void calculateSpectralCentroid()
+	private void calculateSpectralCentroid() //Accurate in all cases except for a slight error probably due to float usage
 	{
 		float []RHSSpectNum = new float [RHSspectrum.length];
-		for(int i=0;i<RHSspectrum.length;i++){
-			RHSSpectNum[i] = RHSspectrum[i] * i;
+		for(int i=1;i<=RHSspectrum.length;i++){
+			RHSSpectNum[i-1] = RHSspectrum[i-1] * i;
 		}
 		float sumN = 0;
 		for(int i=0;i<RHSSpectNum.length;i++){
@@ -187,15 +219,20 @@ public class MainActivity extends Activity {
 		for(int i=0;i<RHSspectrum.length;i++){
 			sumD += RHSspectrum[i];
 		}
-		float divide = sumN/ sumD;
+		Log.d("SPC Debug", "sumN: " + Float.toString(sumN));
+		Log.d("SPC Debug", "sumD: " + Float.toString(sumD));
+		float centroid = sumN/ sumD;
 		
 		// fs = 44100 ------------------------------
 		
-		spectralCentroid = 44100 / RHSspectrum.length * divide;
+		spectralCentroid = (44100 / spectrum.length) * centroid;
+		
+		Log.d("feature", "SPC: " + Float.toString(spectralCentroid));
 		
 	}
 	
-	private void calculateSpectralEntropy(){
+	private void calculateSpectralEntropy() //Accurate in all cases
+	{
 		float [] PSD = new float [spectrum.length];
 		for(int i=0;i<spectrum.length;i++){
 			PSD[i] = spectrum[i] * spectrum[i] / totalEnergy;
@@ -211,9 +248,13 @@ public class MainActivity extends Activity {
 		sum = sum * -1;
 		spectralEntropy = sum;	
 		
+		Log.d("feature", "SPE: " + Float.toString(spectralEntropy));
+		
 	}
 	
-	private void calculateSpectralFlux(){
+	private void calculateSpectralFlux() //Innaccurate for the first iteration only
+	{
+		if(prevSpectrum!=null){
 		float [] diff = new float [spectrum.length];
 		for (int i=0;i<diff.length;i++){
 			diff[i] = spectrum[i] - prevSpectrum[i];
@@ -223,6 +264,9 @@ public class MainActivity extends Activity {
 			sqSum += diff[i] * diff[i];
 		}
 		spectralFlux = (float) Math.sqrt(sqSum); 
+		
+		Log.d("feature", "SPF: " + Float.toString(spectralFlux));
+		}
 	}
 	
 	
