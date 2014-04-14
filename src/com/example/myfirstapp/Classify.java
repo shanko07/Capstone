@@ -1,104 +1,129 @@
 package com.example.myfirstapp;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+
 import Jama.Matrix;
+import android.os.Environment;
 import android.util.Log;
 
 public class Classify {
-	float [][] Y; // train
-	float [][] K;
-	float [][] A; // dictionary
+	double [][] Y; // train
+	double [][] K; // kernel
+	double [][] A; // dictionary
 	int T0;
+	String dictionaryPath;
+	String trainingPath;
 	
-	public Classify(){
+	public Classify(int t0, int fileForDictandTrain){
+		T0=t0;
 		
-	
-	}
-	
-	private float[][] matrixMult(float[][] array1, float[][] array2)
-	{
-		//assume dim[1][] = choose column; dim[][2] = choose row
-
-		int m = array1[0].length;
-		int p = array2.length;
-		int n1 = array1.length;
-		int n2 = array2[0].length;
 		
-		float [][] prod = new float[p][m];
+/* FILE READING FROM CSVs */
 		
-		if(n1!=n2)
-		{
-			//you fools
-			///Log.d("mult","You have failed");
-			return null;
+		switch(fileForDictandTrain){
+		
+		case 0: 
+			dictionaryPath = Environment.getExternalStorageDirectory().toString()+"/carA.csv";
+			trainingPath = Environment.getExternalStorageDirectory().toString()+"/carY.csv";
+			Y = new double[59][6];
+			A = new double[177][59];
+			break;
+			
+		case 1:
+			dictionaryPath = Environment.getExternalStorageDirectory().toString()+"/noiseA.csv";
+			trainingPath = Environment.getExternalStorageDirectory().toString()+"/noiseY.csv";
+			Y = new double[88][6];
+			A = new double[264][88];
+			break;
 		}
-		else
-		{
-			//Log.d("mult","else executed");
-			for(int r1 = 0; r1 < m; r1++){
-				for(int c2 = 0; c2 < p; c2++){
-						float sum = 0;
-						for(int x = 0; x < n1; x++){	
-							sum += array1[x][r1] * array2[c2][x];							
-						}					
-						prod[c2][r1] = sum;
+		
+        
+		BufferedReader br1 = null;
+		String line = "";
+		String cvsSplitBy = ",";
+	 
+		try {
+	 
+			br1 = new BufferedReader(new FileReader(dictionaryPath));
+			
+			int rowCounter = 0;
+			while ((line = br1.readLine()) != null) {
+	 
+			        // use comma as separator
+				String[] values = line.split(cvsSplitBy);
+				for(int i=0; i<values.length; i++){
+					A[i][rowCounter] = Double.parseDouble(values[i]);
 				}
+				rowCounter++;
 			}
-			return prod;			
-		}		
-	}
-	
-	private float[][] tranRow2Col(float[] mat){  // TEST LATER----------------------------------------
-		float [][] result = new float[0][mat.length];
-		for(int c=0;c<mat.length;c++){
-			result[0][c] = mat[c];
-		}
-		return result;
-	}
-	
-	private float[][] transpose(float[][] mat){  // TEST LATER----------------------------------------
-		float [][] result = new float[mat[0].length][mat.length];
-		for(int c=0;c<mat.length;c++){
-			for(int r=0;r<mat[0].length;r++){
-				result[c][r] = mat[r][c];
-			}
-		}
-		return result;
-	}
-
-	
-	private float[][] addSub(float[][] a, float[][] b, int operation){  //if 0 add if 1 subtract
-		float[][] result = new float[a.length][a[0].length];
-		if(operation == 0){
-			//do add
-			for(int i=0;i<a.length;i++){
-				for(int j=0;j<a[0].length;j++){
-					result[i][j] = a[i][j] + b[i][j];
+			Log.d("CLASSIFIER!", "Reading dictionary completed");
+	 
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			if (br1 != null) {
+				try {
+					br1.close();
+				} catch (IOException e) {
+					e.printStackTrace();
 				}
 			}
 		}
-		else{
-			//do subtract
-			for(int i=0;i<a.length;i++){
-				for(int j=0;j<a[0].length;j++){
-					result[i][j] = a[i][j] - b[i][j];
+		
+		
+		BufferedReader br2 = null;
+	 
+		try {
+	 
+			br2 = new BufferedReader(new FileReader(trainingPath));
+			
+			int rowCounter = 0;
+			while ((line = br2.readLine()) != null) {
+	 
+			        // use comma as separator
+				String[] values = line.split(cvsSplitBy);
+				for(int i=0; i<values.length; i++){
+					Y[i][rowCounter] = Double.parseDouble(values[i]);
+				}
+				rowCounter++;
+			}
+			Log.d("CLASSIFIER!", "Reading dictionary completed");
+	 
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			if (br2 != null) {
+				try {
+					br2.close();
+				} catch (IOException e) {
+					e.printStackTrace();
 				}
 			}
 		}
-		return result;
-	}
-	
-	private float[] mat2RowVect(float[][] a){
-		float[] result = new float[a.length];
-		for(int i=0;i<a.length;i++){
-			result[i]=a[i][0];
-		}
-		return result;
+		
+		
+		
+		/* FILE READING FROM CSVs */
+		
+		
+		K = new double[Y.length][Y.length];
 	}
 	
 	public double kernel(double[][] x, double[][] y){
 		
-		int degree = 5;
-		int c = 1;
+		double degree = 5;
+		double c = 1;
 		
 		double sum = 0;
 		
@@ -106,27 +131,35 @@ public class Classify {
 			sum += x[i][0]*y[i][0];
 		}		
 		
-		sum = Math.pow(sum+1,degree);		
+		sum = Math.pow(sum+c,degree);		
 		
 		return sum;
 	}	
 	
 	public double classify(double [][] z){
-				
-		int N = Y[0].length;
-		T0 = 10; //TODO: Arbitrary fix this later
-		double[][] zhat = new double[N][1];
-		double [][] testKZ = new double [N][1];
-		double [][] K = new double [1][1];
-		double [][] A = new double [1][1];
+		
+		for(int i = 0; i<Y.length; i++){
+			for(int j=0; j<Y.length;j++){
+				K[i][j] = kernel(z, Y);
+			}
+		}
+		
+		Log.d("CLASSIFIER!", "Kernel Matrix Created");
+		// WE HAVE SUCCESSFULLY MADE IT TO HERE!
+		
+		int N = Y.length;
+		//T0 = 10; //TODO: Arbitrary fix this later
+		double[][] zhat = new double[1][N];
+		double [][] testKZ = new double [N][1];			
+		double[][] Kzz = new double[1][1];
+		Kzz[0][0] = kernel(z,z);
 		
 		Matrix KM = new Matrix(K);
 		Matrix AM = new Matrix(A);
-		Matrix KZZM = new Matrix(K);
+		Matrix KZZM = new Matrix(Kzz);
 		
 		
-		
-		for(int i =0;i<zhat.length;i++) zhat[i][0] = 0;
+		for(int i =0;i<zhat.length;i++) zhat[0][i] = 0;
 		
 		Matrix zhatM = new Matrix(zhat);
 		
@@ -137,20 +170,18 @@ public class Classify {
 			}
 			testKZ[i][0] = kernel(z,interim);
 		}
+		
 		Matrix testKZM = new Matrix(testKZ);
 		
-		double Kzz = kernel(z,z);
+		Log.d("CLASSIFIER!", "testKZ Matrix Created");
 		
-		
-		
-		double[][] IS = new double[1][1];
+				
+		double[][] IS = new double[T0][1];
 		Matrix ISM = new Matrix(IS);
 		
 		Matrix xsM = new Matrix(K);
 		
 		for(int s = 0; s<T0 ; s++){
-			IS = new double[s][1];
-			ISM = new Matrix(IS);
 			
 			
 			//Compute the tau vector
@@ -160,8 +191,8 @@ public class Classify {
 			Matrix tau = gamma.times(AM);
 			
 			//Set tau at previously found indices to 0
-			for(int a = 0; a<ISM.getColumnDimension(); a++){
-				tau.set(0, a, 0.0);
+			for(int a = 0; a<s; a++){
+				tau.set(0, (int) ISM.get(0,a), 0.0);
 			}
 			
 			//Find the next largest index
@@ -201,13 +232,13 @@ public class Classify {
 			xM.set((int) ISM.get(0, i), 0, xsM.get(0, i));
 		}
 		
-
+		//calculate residual
 		Matrix b = testKZM.timesEquals(2.0).times(AM).times(xM);
 		Matrix c = xM.transpose().times(AM.transpose()).times(KM).times(AM).times(xM);
 		
 		Matrix Residual = KZZM.minus(b).plus(c);		
 		
-
+		//return residual
 		return Residual.get(0,0);
 	}
 	

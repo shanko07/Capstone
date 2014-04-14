@@ -120,24 +120,6 @@ public class Audio extends Thread
                 
                 String youFilePath = Environment.getExternalStorageDirectory().toString()+"/test_features.wav";
                 
-                /*
-                WavFile wavFile1 = WavFile.readFromFilePath(youFilePath);
-                int outerLength = wavFile1.samplesForChannels.length;
-                Log.d("tag1", "out: " + Integer.toString(outerLength));
-                int innerLength = wavFile1.samplesForChannels[0].length;
-                Log.d("tag1", "in: " + Integer.toString(innerLength));
-                for(int i=0;i<innerLength;i++){
-                	double sampval = wavFile1.samplesForChannels[0][i].convertToDouble();
-                	//byte [] byte1 = new byte[wavFile1.samplesForChannels[i][0].convertToBytes().length];
-                	//for(int j=0;j<byte1.length;j++){
-                		//Log.d("tag1",Double.toString(sampval));
-                	//}
-                }
-                
-                */
-                
-                
-                
                 File file = new File(youFilePath);
                 
                         FileInputStream fin = null;
