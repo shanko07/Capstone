@@ -254,6 +254,23 @@ public class MainActivity extends Activity {
 	
 	private void calculateSpectralFlux() //Innaccurate for the first iteration only
 	{
+		
+		float a1[][]={
+			    {1,6},
+			    {7,3}
+			};
+		float a2[][]={
+			    {13,3},
+			    {2,7},
+			    {5,8}
+			};
+		float r1[][] = new float[a1[0].length][a2.length];
+		r1 = matrixMult(a1,a2);
+		Log.d("mult",Float.toString(r1[2][1]));
+		
+		
+		
+		
 		if(prevSpectrum!=null){
 		float [] diff = new float [spectrum.length];
 		for (int i=0;i<diff.length;i++){
@@ -269,6 +286,42 @@ public class MainActivity extends Activity {
 		}
 	}
 	
+
+	
+	private float[][] matrixMult(float[][] array1, float[][] array2)
+	{
+		//assume dim[1][] = choose column; dim[][2] = choose row
+
+		int m = array1[0].length;
+		int p = array2.length;
+		int n1 = array1.length;
+		int n2 = array2[0].length;
+		
+		float [][] prod = new float[p][m];
+		
+		if(n1!=n2)
+		{
+			//you fools
+			Log.d("mult","You have failed");
+			return null;
+		}
+		else
+		{
+			Log.d("mult","else executed");
+			for(int r1 = 0; r1 < m; r1++){
+				for(int c2 = 0; c2 < p; c2++){
+						float sum = 0;
+						for(int x = 0; x < n1; x++){	
+							sum += array1[x][r1] * array2[c2][x];							
+						}					
+						prod[c2][r1] = sum;
+				}
+			}
+			Log.d("mult","something will be returned");
+			return prod;
+			
+		}		
+	}
 	
 	
 	    
