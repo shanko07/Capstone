@@ -95,23 +95,23 @@ public class Classify {
 		return result;
 	}
 	
-	public float kernel(float[][] x, float[][] y){
+	public double kernel(double[][] x, double[][] y){
 		
 		int degree = 5;
 		int c = 1;
 		
-		float sum = 0;
+		double sum = 0;
 		
 		for(int i=0;i<x.length;i++){
 			sum += x[i][0]*y[i][0];
 		}		
 		
-		sum = (float) Math.pow(sum+1,degree);		
+		sum = Math.pow(sum+1,degree);		
 		
 		return sum;
 	}	
 	
-	public float [][] classify(float [][] z){
+	public double classify(double [][] z){
 				
 		int N = Y[0].length;
 		T0 = 10; //TODO: Arbitrary fix this later
@@ -122,6 +122,7 @@ public class Classify {
 		
 		Matrix KM = new Matrix(K);
 		Matrix AM = new Matrix(A);
+		Matrix KZZM = new Matrix(K);
 		
 		
 		
@@ -130,7 +131,7 @@ public class Classify {
 		Matrix zhatM = new Matrix(zhat);
 		
 		for(int i=0;i<N;i++){
-			float[][] interim = new float[0][Y[i].length];
+			double[][] interim = new double[0][Y[i].length];
 			for(int j=0;j<Y[i].length;j++){
 				interim[0][j] = Y[i][j];
 			}
@@ -140,9 +141,16 @@ public class Classify {
 		
 		double Kzz = kernel(z,z);
 		
+		
+		
+		double[][] IS = new double[1][1];
+		Matrix ISM = new Matrix(IS);
+		
+		Matrix xsM = new Matrix(K);
+		
 		for(int s = 0; s<T0 ; s++){
-			double[][] IS = new double[s][1];
-			Matrix ISM = new Matrix(IS);
+			IS = new double[s][1];
+			ISM = new Matrix(IS);
 			
 			
 			//Compute the tau vector
@@ -179,45 +187,28 @@ public class Classify {
 			AsubIS.setMatrix(0,0,colindices,AsubIS);
 			
 			//calculate xs
-			Matrix xsM = ( AsubIS.transpose().times(KM.times(AsubIS)).inverse() ).times(testKZM.times(AsubIS).transpose());
+			xsM = ( AsubIS.transpose().times(KM.times(AsubIS)).inverse() ).times(testKZM.times(AsubIS).transpose());
 			
 			//calculate zhat
 			zhatM = AsubIS.times(xsM);			
 			
 		}
 		
-		
-		
-		
-		
-		
-		
-		/*
-		for(int i =0;i<zhat.length;i++) zhat[i][0] = 0;
-		
-		float[][] Is; // index set
-		
-		float [][] testKZ = new float [N][1];
-		for(int i=0;i<N;i++){
-			float[][] interim = new float[0][Y[i].length];
-			for(int j=0;j<Y[i].length;j++){
-				interim[0][j] = Y[i][j];
-			}
-			testKZ[i][0] = kernel(z,interim);
+		int colA = A.length;
+		double[][] x = new double[1][colA];
+		Matrix xM = new Matrix(x);
+		for(int i=0; i<ISM.getColumnDimension(); i++){
+			xM.set((int) ISM.get(0, i), 0, xsM.get(0, i));
 		}
-		
-		float Kzz = kernel(z,z);
-		
-		for(int s = 0; s<T0 ; s++){
-			float[][] tau = new float[A.length][1];
-			matrixMult(addSub(testKZ, matrixMult(transpose(zhat), K), 1), A);
-		}
-		
-		*/
-		
 		
 
-		return null;
+		Matrix b = testKZM.timesEquals(2.0).times(AM).times(xM);
+		Matrix c = xM.transpose().times(AM.transpose()).times(KM).times(AM).times(xM);
+		
+		Matrix Residual = KZZM.minus(b).plus(c);		
+		
+
+		return Residual.get(0,0);
 	}
 	
 
