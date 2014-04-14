@@ -116,11 +116,13 @@ public class Classify {
 		int N = Y[0].length;
 		T0 = 10; //TODO: Arbitrary fix this later
 		double[][] zhat = new double[N][1];
-		double[][] Is = new double[T0][1];
 		double [][] testKZ = new double [N][1];
 		double [][] K = new double [1][1];
+		double [][] A = new double [1][1];
 		
 		Matrix KM = new Matrix(K);
+		Matrix AM = new Matrix(A);
+		
 		
 		
 		for(int i =0;i<zhat.length;i++) zhat[i][0] = 0;
@@ -139,10 +141,49 @@ public class Classify {
 		double Kzz = kernel(z,z);
 		
 		for(int s = 0; s<T0 ; s++){
-			float[][] tau = new float[A.length][1];
-			matrixMult(addSub(testKZ, matrixMult(transpose(zhat), K), 1), A);
+			double[][] IS = new double[s][1];
+			Matrix ISM = new Matrix(IS);
+			
+			
+			//Compute the tau vector
 			Matrix alpha = zhatM.transpose();
 			Matrix beta = alpha.times(KM);
+			Matrix gamma = testKZM.minus(beta);
+			Matrix tau = gamma.times(AM);
+			
+			//Set tau at previously found indices to 0
+			for(int a = 0; a<ISM.getColumnDimension(); a++){
+				tau.set(0, a, 0.0);
+			}
+			
+			//Find the next largest index
+			int largestIndex = 0;
+			double max = 0.0;
+			for(int i=0;i<tau.getColumnDimension();i++){
+				if(Math.abs(tau.get(0, i)) >= max){
+					largestIndex = i;
+					max = Math.abs(tau.get(0, i));
+				}
+			}
+			
+			//Add the next largest index
+			ISM.set(0, s, largestIndex);
+			
+			//Create A(:IS) and use to calculate xs			
+			Matrix AsubIS = AM.copy();
+			double[][] iscopy = ISM.getArrayCopy();
+			int[] colindices = new int[iscopy.length];
+			for(int i=0; i<colindices.length; i++){
+				colindices[i] = (int) iscopy[i][0];
+			}
+			AsubIS.setMatrix(0,0,colindices,AsubIS);
+			
+			//calculate xs
+			Matrix xsM = ( AsubIS.transpose().times(KM.times(AsubIS)).inverse() ).times(testKZM.times(AsubIS).transpose());
+			
+			//calculate zhat
+			zhatM = AsubIS.times(xsM);			
+			
 		}
 		
 		
