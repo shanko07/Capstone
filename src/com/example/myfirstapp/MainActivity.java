@@ -1,5 +1,6 @@
 package com.example.myfirstapp;
 
+import Jama.Matrix;
 import android.os.Bundle;
 import android.app.Activity;
 import android.view.Menu;
@@ -32,6 +33,7 @@ import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.GraphView.GraphViewData;
 import com.jjoe64.graphview.GraphViewSeries;
 import com.jjoe64.graphview.LineGraphView;
+
 
 
 import java.math.*;
@@ -126,22 +128,30 @@ public class MainActivity extends Activity {
 	    	calculateSpectralEntropy();
 	    	calculateSpectralFlux();
 	    	
-	    	if(spectrum!=null){
+	    	if(prevSpectrum!=null){
 	    	Classify carClassifier = new Classify(3, 0);
 	    	
-	    	double[][]  blah = new double[1][6];
+	    	double[][]  blah = new double[6][1];
 	    	
 	    	blah[0][0] = rmsAmplitude;
-	    	blah[0][1] = zeroCrossingRate;
-	    	blah[0][2] = spectralRolloff;
-	    	blah[0][3] = spectralCentroid;
-	    	blah[0][4] = spectralEntropy;
-	    	blah[0][5] = spectralFlux;
+	    	blah[1][0] = zeroCrossingRate;
+	    	blah[2][0] = spectralRolloff;
+	    	blah[3][0] = spectralCentroid;
+	    	blah[4][0] = spectralEntropy;
+	    	blah[5][0] = spectralFlux;
 	    	
 	    			
 			double d = carClassifier.classify(blah);
 			
-			Log.d("CLASSIFIER!", Double.toString(d));
+			Log.d("Residual", Double.toString(d));
+			Log.d("Residual", "RMS: " + Float.toString(rmsAmplitude));
+			Log.d("Residual", "ZCR: " + Float.toString(zeroCrossingRate));
+			Log.d("Residual", "SPR: " + Float.toString(spectralRolloff));
+			Log.d("Residual", "SPC: " + Float.toString(spectralCentroid));
+			Log.d("Residual", "SPE: " + Float.toString(spectralEntropy));
+			Log.d("Residual", "SPF: " + Float.toString(spectralFlux));
+			
+			
 	    	}
 	    	
 	    	break;
@@ -420,6 +430,8 @@ public class MainActivity extends Activity {
         super.onCreate(icicle);     
                
         Audio a1 = new Audio(mHandler);
+        
+       
         
 
         LinearLayout ll = new LinearLayout(this);
