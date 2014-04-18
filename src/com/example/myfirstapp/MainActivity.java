@@ -1,6 +1,5 @@
 package com.example.myfirstapp;
 
-import Jama.Matrix;
 import android.os.Bundle;
 import android.app.Activity;
 import android.view.Menu;
@@ -10,33 +9,28 @@ import android.view.Menu;
 
 //package com.android.audiorecordtest;
 
-import android.app.Activity;
+import android.view.ViewGroup;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
-import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
-import android.view.ViewGroup;
 import android.widget.Button;
 import android.view.View;
-import android.view.View.OnClickListener;
 import android.content.Context;
 import android.util.Log;
 import android.media.MediaRecorder;
 import android.media.MediaPlayer;
 
 import java.io.IOException;
+import java.nio.Buffer;
+import java.util.Collections;
 
 import com.jjoe64.graphview.BarGraphView;
 import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.GraphView.GraphViewData;
 import com.jjoe64.graphview.GraphViewSeries;
-import com.jjoe64.graphview.LineGraphView;
-
-
-
-import java.math.*;
 
 
 
@@ -50,88 +44,108 @@ public class MainActivity extends Activity {
 
 */
 	
-	protected float[] fftResults;
-	protected float[] timeDomain;
-	float zeroCrossingRate;
-	float rmsAmplitude;
-	float [] prevSpectrum;
-	float [] spectrum; // entire spectrum
-	float []RHSspectrum; //absolute value of fft
-	float totalEnergy; //total energy of the signal
+	Audio a1;
+	
+	
+	/* Frequency and Time Analysis Variables */
+	protected double[] fftResults;  //Result of DFT on the current frame of data
+	protected double[] timeDomain;  //Time domain representation of the current frame of data
+	double zeroCrossingRate;
+	double rmsAmplitude;
+	double [] prevSpectrum = null;  //Previous frame spectrum
+	double [] spectrum; // absolute value of fftResults
+	double []RHSspectrum; //right half spectrum
+	double totalEnergy; //total energy of the signal
 	int below91; //bins below which 91 percent of signal energy is contained
-	float runningSum;
-	float spectralRolloff;
-	float spectralCentroid;
-	float spectralEntropy;
-	float spectralFlux;
-	int N;
+	double runningSum;
+	double spectralRolloff;
+	double spectralCentroid;
+	double spectralEntropy;
+	double spectralFlux;
+	int N;  //Number of samples in time and frequency domain
+	int sampRate;  //Sampling rate
+	
+	/* GraphView Variables */
 	GraphViewSeries exampleSeries;
 	GraphView graphView;	
 	GraphViewData[] gViewData;
 	
+	/* Classifier Variables */
+	double[][] pastResidual = new double[2][10];  //2 classes, 2 values of previous results
+	//TODO: Finish this ^ ^ 
+	TextView carText;
+	TextView noiseText;
+	double carResidual;
+	double noiseResidual;
+	final double[][]  blah = new double[6][1];
+	//Car class arg1=0
+	final Classify car = new Classify(3, 0);
+	//Noise class arg1=1
+	final Classify noise = new Classify(3, 1);
+	int testimer = 0;
+	int ringBuffer = 0;
 	
+	
+	
+	
+	//Message Handler to receive messages from the Audio thread
 	private final Handler mHandler = new Handler() {
 	    @Override
 	    public void handleMessage(Message msg) {
+	    	
+	    	testimer++;
 	    
 	    	switch (msg.what){
 	    	
+	    	//Case 0 is when the message passed is the fft results
 	    	case 0:
 	    		
-	    		//Log.d("feature", "case 0");
-	    		
-	    		if(spectrum!=null)
-	    		{
-	    			prevSpectrum = spectrum;	    			
-	    		}
+	    	//do not attempt to assign previous spectrum on the first running frame since there is no previous data
+	    	if(spectrum!=null)
+	    	{
+	    		prevSpectrum = spectrum;	    			
+	    	}
 	    	
-	    	spectrum = (float[]) msg.obj;  //Acquire spectrum
+	    	//Acquire spectrum
+	    	spectrum = (double[]) msg.obj;
+	    	sampRate = msg.arg1;
 	    	
+	    	//calculate total energy of the signal
 	    	totalEnergy = 0;
-	    	for(int i=0; i<spectrum.length; i++)  //calculate total energy
+	    	for(int i=0; i<spectrum.length; i++)
 	    	{
 	    		totalEnergy += spectrum[i]*spectrum[i];
 	    	}
-	    	//Log.d("SPR Debug", "totalEnergy: " + Float.toString(totalEnergy));
 	    	
-	    	
-	    	RHSspectrum = new float[spectrum.length/2];   //create RHSspectrum
+	    	//create the RHSspectrum from the original spectrum
+	    	RHSspectrum = new double[spectrum.length/2];
 	    	for(int i=0; i<spectrum.length/2; i++)
 	    	{
 	    		RHSspectrum[i] = spectrum[i];
-	    		//Log.d("SPR Debug", "RHSspectrum: " + Float.toString(RHSspectrum[i]));
 	    	}	    	
 
-	    	
+	    	//calculate the frequency bin at which 91% of the energy is contained below said frequency bin
 	    	below91 = 0;
 	    	runningSum = 0;
 	    	for(int i=0;i<RHSspectrum.length;i++)
 	    	{
 	    		runningSum += RHSspectrum[i]*RHSspectrum[i];
-	    		Log.d("SPR Debug", "runningSum: " + Float.toString(runningSum));
-	    		Log.d("SPR Debug", "i: " + Integer.toString(i));
-	    		//Log.d("SPR Debug", "totalEnergy: " + Float.toString(totalEnergy));
 	    		if((runningSum*2)/totalEnergy >= .91)
 	    		{
-	    			//Log.d("feature", "runningSum: " + Float.toString(runningSum));
-	    			//Log.d("feature", "totalEnergy: " + Float.toString(totalEnergy));
 	    			below91=i;
 	    			i=RHSspectrum.length;
-	    			Log.d("SPR Debug", "below91: " + Integer.toString(below91));
 	    		}
 	    	}
 	    	
 	    	
-	    	
+	    	/* Calculate frequency domain features */
 	    	calculateSpectralRolloff();
 	    	calculateSpectralCentroid();
 	    	calculateSpectralEntropy();
 	    	calculateSpectralFlux();
 	    	
+	    	//Run the KOMP algorithm on the current feature and obtain the residual based on classification with noise and car dictionaries
 	    	if(prevSpectrum!=null){
-	    	Classify carClassifier = new Classify(3, 0);
-	    	
-	    	double[][]  blah = new double[6][1];
 	    	
 	    	blah[0][0] = rmsAmplitude;
 	    	blah[1][0] = zeroCrossingRate;
@@ -140,48 +154,76 @@ public class MainActivity extends Activity {
 	    	blah[4][0] = spectralEntropy;
 	    	blah[5][0] = spectralFlux;
 	    	
-	    			
-			double d = carClassifier.classify(blah);
+			carResidual = car.classify(blah);
+			noiseResidual = noise.classify(blah);
 			
-			Log.d("Residual", Double.toString(d));
-			Log.d("Residual", "RMS: " + Float.toString(rmsAmplitude));
-			Log.d("Residual", "ZCR: " + Float.toString(zeroCrossingRate));
-			Log.d("Residual", "SPR: " + Float.toString(spectralRolloff));
-			Log.d("Residual", "SPC: " + Float.toString(spectralCentroid));
-			Log.d("Residual", "SPE: " + Float.toString(spectralEntropy));
-			Log.d("Residual", "SPF: " + Float.toString(spectralFlux));
+			pastResidual[0][ringBuffer] = carResidual;
+			pastResidual[1][ringBuffer] = noiseResidual;
 			
+			ringBuffer++;
+			if(ringBuffer == 10) ringBuffer = 0;
+			
+			int carMatch = 0;
+			for(int i = 0; i<pastResidual[0].length; i++){
+				if(pastResidual[0][i] < pastResidual[1][i]) carMatch++;
+			}
+			
+			if(carResidual < noiseResidual) {carText.setText("Car"); Log.d("first order classifier", "Car");}
+			else {carText.setText(""); Log.d("first order classifier", "xxxxxxxx");}
+			
+			//if(carMatch >= 4) carText.setText("Match");
+			//else carText.setText("Failure");
+			
+			Log.d("Residual", "z1: " + Double.toString(blah[0][0]));
+			Log.d("Residual", "z2: " + Double.toString(blah[1][0]));
+			Log.d("Residual", "z3: " + Double.toString(blah[2][0]));
+			Log.d("Residual", "z4: " + Double.toString(blah[3][0]));
+			Log.d("Residual", "z5: " + Double.toString(blah[4][0]));
+			Log.d("Residual", "z6: " + Double.toString(blah[5][0]));
+			Log.d("Residual", "car: " + Double.toString(carResidual));
+			Log.d("Residual", "noise: " + Double.toString(noiseResidual));
+			
+			
+			
+			//Toast.makeText(MainActivity.this, Double.toString(5.67), Toast.LENGTH_SHORT).show();
+			
+					//carText.setText(" " + Double.toString(carResidual));
+					//noiseText.setText(" " + Double.toString(noiseResidual));
 			
 	    	}
 	    	
 	    	break;
 	    	
 	    	
+	    	//Case 1 is when the message passed is the time domain representation
 	    	case 1:
 	    		
-	    		//Log.d("feature", "case 1");
-	    		
-	    		timeDomain = (float[]) msg.obj;
-	    		//Log.d("feature", "after td assignment");
+	    		timeDomain = (double[]) msg.obj;
 	    		N = msg.arg1;
 	    		
+	    		//noiseText.setText(Double.toString(noiseResidual));
 	    		
-	    		calculateRMSAmplitude();  // gets the RMS amplitude
-	    		calculateZeroCrossing();  // gets the zero crossing rate
-	    		
+	    		/* Calculate time domain features */
+	    		calculateRMSAmplitude();
+	    		calculateZeroCrossing();
 	    		
 	    		break;
+	    		
+	    		
 	    	
-	    	default:
-	    		//Log.d("feature", "Error not 0 or 1");
-	    	
+	    	default:	    	
 	    	}
-	    
-	    
-	    }
-
-		
+	    	//carText.setText(Integer.toString(testimer));
+			//noiseText.setText(Integer.toString(testimer));
+	    }	
 	};
+	
+	/*
+	private void setStuff(double d, double e){
+		carText.setText(Double.toString(d));
+		noiseText.setText(Double.toString(e));
+	}
+	*/
 	   
 	private void calculateZeroCrossing() 
 	{
@@ -189,8 +231,7 @@ public class MainActivity extends Activity {
 	
 	for(int i=0; i<timeDomain.length-1; i++)
 	{
-		//Log.d("TD", Float.toString(timeDomain[i]));
-		//Log.d("TD", Float.toString(timeDomain[i]));
+
 		if(timeDomain[i] > 0 && timeDomain[i+1] < 0)
 		{
 			zeroCrossings++;
@@ -199,101 +240,78 @@ public class MainActivity extends Activity {
 		{
 			zeroCrossings++;
 		}
-		//Log.d("TD", Integer.toString(zeroCrossings));
 	}
-	
-	//zeroCrossingRate = zeroCrossings/N;
+
 	zeroCrossingRate = zeroCrossings;
-	
-	Log.d("feature", "ZCR: " + Float.toString(zeroCrossingRate));
-	
 	}
 	
 	
 	private void calculateRMSAmplitude() {
 		rmsAmplitude = 0;
-		float sum = 0;
+		double sum = 0;
 		for(int i=0; i<timeDomain.length; i++){
 			sum += timeDomain[i]*timeDomain[i];
 		}
 		sum/=N;
-		rmsAmplitude = (float) Math.sqrt(sum);
-		
-		Log.d("feature", "RMS: " + Float.toString(rmsAmplitude));
-		
+		rmsAmplitude = (double) Math.sqrt(sum);
 	}
 	
 	
-	private void calculateSpectralRolloff() //Erroneous in all cases
+	private void calculateSpectralRolloff()
 	{
-		spectralRolloff = (float) ((below91+1)*44100.0/spectrum.length);
-		
-		Log.d("feature", "SPR: " + Float.toString(spectralRolloff));
-		
+		spectralRolloff = (double) ((below91+1)*(double)sampRate/spectrum.length);
 	}
 	
-	private void calculateSpectralCentroid() //Accurate in all cases except for a slight error probably due to float usage
+	private void calculateSpectralCentroid()
 	{
-		float []RHSSpectNum = new float [RHSspectrum.length];
+		double []RHSSpectNum = new double [RHSspectrum.length];
 		for(int i=1;i<=RHSspectrum.length;i++){
 			RHSSpectNum[i-1] = RHSspectrum[i-1] * i;
 		}
-		float sumN = 0;
+		double sumN = 0;
 		for(int i=0;i<RHSSpectNum.length;i++){
 			sumN += RHSSpectNum[i];
 		}
-		float sumD = 0;
+		double sumD = 0;
 		for(int i=0;i<RHSspectrum.length;i++){
 			sumD += RHSspectrum[i];
 		}
-		Log.d("SPC Debug", "sumN: " + Float.toString(sumN));
-		Log.d("SPC Debug", "sumD: " + Float.toString(sumD));
-		float centroid = sumN/ sumD;
+		double centroid = sumN/ sumD;
 		
-		// fs = 44100 ------------------------------
-		
-		spectralCentroid = (44100 / spectrum.length) * centroid;
-		
-		Log.d("feature", "SPC: " + Float.toString(spectralCentroid));
-		
+		spectralCentroid = (sampRate / spectrum.length) * centroid;
 	}
 	
-	private void calculateSpectralEntropy() //Accurate in all cases
+	private void calculateSpectralEntropy() 
 	{
-		float [] PSD = new float [spectrum.length];
+		double [] PSD = new double [spectrum.length];
 		for(int i=0;i<spectrum.length;i++){
 			PSD[i] = spectrum[i] * spectrum[i] / totalEnergy;
 		}
-		float [] PSDmultLog = new float [PSD.length];
+		double [] PSDmultLog = new double [PSD.length];
 		for(int i = 0; i<PSDmultLog.length;i++){
-			PSDmultLog[i] = (float) Math.log(PSD[i]) / (float) Math.log(2) * (float) PSD[i];
+			PSDmultLog[i] = (double) Math.log(PSD[i]) / (double) Math.log(2) * (double) PSD[i];
 		}
-		float sum = 0;
+		double sum = 0;
 		for(int i = 0; i<PSDmultLog.length;i++){
 			sum += PSDmultLog[i];
 		}
 		sum = sum * -1;
 		spectralEntropy = sum;	
-		
-		Log.d("feature", "SPE: " + Float.toString(spectralEntropy));
-		
 	}
 	
-	private void calculateSpectralFlux() //Innaccurate for the first iteration only
+	private void calculateSpectralFlux() 
 	{		
 		
 		if(prevSpectrum!=null){
-		float [] diff = new float [spectrum.length];
+		double [] diff = new double [spectrum.length];
 		for (int i=0;i<diff.length;i++){
 			diff[i] = spectrum[i] - prevSpectrum[i];
 		}
-		float sqSum = 0;
+		double sqSum = 0;
 		for (int i=0;i<diff.length;i++){
 			sqSum += diff[i] * diff[i];
 		}
-		spectralFlux = (float) Math.sqrt(sqSum); 
-		
-		Log.d("feature", "SPF: " + Float.toString(spectralFlux));
+		spectralFlux = (double) Math.sqrt(sqSum); 
 		}
 	}
 	
@@ -307,7 +325,7 @@ public class MainActivity extends Activity {
 	}
 	
 	
-	
+	/*
 	
 	
 	
@@ -319,6 +337,7 @@ public class MainActivity extends Activity {
 
     private PlayButton   mPlayButton = null;
     private MediaPlayer   mPlayer = null;
+ 
 
     private void onRecord(boolean start) {
         if (start) {
@@ -354,9 +373,7 @@ public class MainActivity extends Activity {
 
     private void startRecording() {
         mRecorder = new MediaRecorder();
-        Log.d("testapp", "start rec before audio source set");
         mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-        Log.d("testapp", "after set");
         mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
         mRecorder.setOutputFile(mFileName);
         mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
@@ -419,22 +436,28 @@ public class MainActivity extends Activity {
             setOnClickListener(clicker);
         }
     }
+    
+    */
 
     public MainActivity() { //AudioRecordTest
-        mFileName = Environment.getExternalStorageDirectory().getAbsolutePath();
-        mFileName += "/audiorecordtest.3gp";
+        //mFileName = Environment.getExternalStorageDirectory().getAbsolutePath();
+        //mFileName += "/audiorecordtest.3gp";
     }
 
     @Override
     public void onCreate(Bundle icicle) {
         super.onCreate(icicle);     
-               
-        Audio a1 = new Audio(mHandler);
+        setContentView(R.layout.activity_main);   
         
-       
-        
+        a1 = new Audio(mHandler);
 
-        LinearLayout ll = new LinearLayout(this);
+        carText = (TextView) findViewById(R.id.textView3);
+		noiseText = (TextView) findViewById(R.id.textView4);
+		
+		carText.setText("A");
+		carText.setText("B");
+		carText.setText("c");
+        //LinearLayout ll = new LinearLayout(this);
         /*
         mRecordButton = new RecordButton(this);
         ll.addView(mRecordButton,
@@ -448,41 +471,33 @@ public class MainActivity extends Activity {
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 0));
-        setContentView(ll);
-        
-        
         */
+
         
      // init example series data
-        exampleSeries = new GraphViewSeries(new GraphViewData[] {
-              new GraphViewData(1, 2.0d)
-              , new GraphViewData(2, 1.5d)
-              , new GraphViewData(3, 2.5d)
-              , new GraphViewData(4, 1.0d)
-        });
+       // exampleSeries = new GraphViewSeries(new GraphViewData[] {
+        //      new GraphViewData(1, 2.0d)
+        //      , new GraphViewData(2, 1.5d)
+       //       , new GraphViewData(3, 2.5d)
+        //      , new GraphViewData(4, 1.0d)
+       // });
         
-        Log.d("123", "alpha");
         
-        GraphView graphView = new BarGraphView(
-              this // context
-              , "GraphViewDemo" // heading
-        );
+       // GraphView graphView = new BarGraphView(
+       //       this // context
+       //       , "GraphViewDemo" // heading
+       // );
         
-        Log.d("123", "beta");
         
-        graphView.addSeries(exampleSeries); // data
+       // graphView.addSeries(exampleSeries); // data
         
-        Log.d("123", "gamma");
          
-        LinearLayout layout = (LinearLayout) findViewById(R.id.barGraph);
+        //LinearLayout layout = (LinearLayout) findViewById(R.id.barGraph);
         
-        Log.d("123", "delta");
-        ll.addView(graphView);
+        //ll.addView(graphView);
         
-        Log.d("123", "epsilon");
         
-        setContentView(ll);
-        
+        //setContentView(ll);
         
         
     }
@@ -490,6 +505,7 @@ public class MainActivity extends Activity {
     @Override
     public void onPause() {
         super.onPause();
+       /*
         if (mRecorder != null) {
             mRecorder.release();
             mRecorder = null;
@@ -499,6 +515,7 @@ public class MainActivity extends Activity {
             mPlayer.release();
             mPlayer = null;
         }
+        */
     }
 	
 	
