@@ -21,7 +21,8 @@
         android:layout_height="wrap_content"
         android:layout_alignParentLeft="true"
         android:layout_alignParentTop="true"
-        android:text="Car Residual" />
+        android:text="Car Indicator"
+        android:textSize="40sp" />
 
     <TextView
         android:id="@+id/textView3"
@@ -29,22 +30,17 @@
         android:layout_height="wrap_content"
         android:layout_alignParentLeft="true"
         android:layout_below="@+id/textView1"
-        android:text="TextView" />
+        android:text="TextView"
+        android:textSize="60dp" />
 
-    <TextView
-        android:id="@+id/textView2"
+    <Button
+        android:id="@+id/button1"
+        android:onClick="recordClickListener"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentLeft="true"
         android:layout_below="@+id/textView3"
-        android:text="Noise Residual" />
-
-    <TextView
-        android:id="@+id/textView4"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentLeft="true"
-        android:layout_below="@+id/textView2"
-        android:text="TextView" />
+        android:layout_marginTop="142dp"
+        android:layout_toRightOf="@+id/textView1"
+        android:text="Record" />
   
 </RelativeLayout>

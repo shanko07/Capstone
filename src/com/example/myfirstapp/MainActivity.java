@@ -16,16 +16,28 @@ import android.widget.Toast;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
+import android.os.Vibrator;
 import android.widget.Button;
 import android.view.View;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
+import android.graphics.Color;
 import android.util.Log;
+import android.media.AudioManager;
 import android.media.MediaRecorder;
 import android.media.MediaPlayer;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.Buffer;
+import java.text.SimpleDateFormat;
 import java.util.Collections;
+import java.util.Date;
 
 import com.jjoe64.graphview.BarGraphView;
 import com.jjoe64.graphview.GraphView;
@@ -43,8 +55,19 @@ public class MainActivity extends Activity {
 	}
 
 */
-	
+	SharedPreferences sharedPrefs;
+	Editor prefsEditor;
 	Audio a1;
+	AudioManager myAudioManager;
+	int musicStreamMaxVolume;
+	int musicStreamCurrentVolume;
+	boolean writing = false;
+	int frameWrittenCounter = 0;
+	FileWriter fw;
+	BufferedWriter bw;	
+	int fileNumber = 0;
+	File output1;
+	Button recordButton;
 	
 	
 	/* Frequency and Time Analysis Variables */
@@ -86,6 +109,14 @@ public class MainActivity extends Activity {
 	int ringBuffer = 0;
 	
 	
+	
+	
+	public void recordClickListener(View view) {
+		Log.d("clicky", "we clicked it");
+		if(!writing){
+			writing = true;
+		}
+	}
 	
 	
 	//Message Handler to receive messages from the Audio thread
@@ -160,35 +191,92 @@ public class MainActivity extends Activity {
 			pastResidual[0][ringBuffer] = carResidual;
 			pastResidual[1][ringBuffer] = noiseResidual;
 			
+			Log.d("residual", "car: " + Double.toString(carResidual));
+			Log.d("residual", "silence: " + Double.toString(noiseResidual));
+			
 			ringBuffer++;
 			if(ringBuffer == 10) ringBuffer = 0;
 			
 			int carMatch = 0;
+			
 			for(int i = 0; i<pastResidual[0].length; i++){
-				if(pastResidual[0][i] < pastResidual[1][i]) carMatch++;
+				if(pastResidual[0][i] < pastResidual[1][i] && pastResidual[0][i] < .1){
+					carMatch++;
+				}
 			}
 			
-			if(carResidual < noiseResidual) {carText.setText("Car"); Log.d("first order classifier", "Car");}
+			/*
+			int spree = 0;
+			int maxSpree = 0;
+			boolean broken = false;
+			for(int i = 0; i<pastResidual[0].length; i++){
+				if(broken){
+					broken = false;
+					if(spree>maxSpree){
+						maxSpree = spree;
+					}
+				}
+				if(pastResidual[0][i] < pastResidual[1][i] && pastResidual[0][i] < .1){
+					spree++;
+				}
+				else{
+					broken = true;
+				}
+			}
+			*/
+			
+			
+			/*
+			if(carResidual < noiseResidual){
+				
+				carText.setText("Car"); Log.d("first order classifier", "Car");
+				Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+				 // Vibrate for 500 milliseconds
+				 v.vibrate(100);
+			}
 			else {carText.setText(""); Log.d("first order classifier", "xxxxxxxx");}
+			*/
 			
-			//if(carMatch >= 4) carText.setText("Match");
-			//else carText.setText("Failure");
+			musicStreamCurrentVolume = myAudioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
 			
-			Log.d("Residual", "z1: " + Double.toString(blah[0][0]));
-			Log.d("Residual", "z2: " + Double.toString(blah[1][0]));
-			Log.d("Residual", "z3: " + Double.toString(blah[2][0]));
-			Log.d("Residual", "z4: " + Double.toString(blah[3][0]));
-			Log.d("Residual", "z5: " + Double.toString(blah[4][0]));
-			Log.d("Residual", "z6: " + Double.toString(blah[5][0]));
-			Log.d("Residual", "car: " + Double.toString(carResidual));
-			Log.d("Residual", "noise: " + Double.toString(noiseResidual));
+			/*
+			if(maxSpree >= 4){
+				
+				carText.setTextColor(Color.RED);
+				carText.setBackgroundColor(Color.BLACK);
+				carText.setText("Car"); Log.d("first order classifier", "Car");
+				Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+				 // Vibrate for 100 milliseconds
+				 v.vibrate(50);
+				 myAudioManager.setStreamMute(AudioManager.STREAM_MUSIC, true);
+				 
+			}
+			else {carText.setBackgroundColor(Color.WHITE); carText.setText(""); Log.d("first order classifier", "xxxxxxxx");
+			
+			myAudioManager.setStreamMute(AudioManager.STREAM_MUSIC, false);
+			
+			}
+			*/
 			
 			
+			if(carMatch >= 5){
+				
+				carText.setTextColor(Color.RED);
+				carText.setBackgroundColor(Color.BLACK);
+				carText.setText("Car"); Log.d("first order classifier", "Car");
+				Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+				 // Vibrate for 100 milliseconds
+				 v.vibrate(100);
+				 myAudioManager.setStreamMute(AudioManager.STREAM_MUSIC, true);
+				 
+			}
+			else {carText.setBackgroundColor(Color.WHITE); carText.setText(""); Log.d("first order classifier", "xxxxxxxx");
 			
-			//Toast.makeText(MainActivity.this, Double.toString(5.67), Toast.LENGTH_SHORT).show();
+			myAudioManager.setStreamMute(AudioManager.STREAM_MUSIC, false);
 			
-					//carText.setText(" " + Double.toString(carResidual));
-					//noiseText.setText(" " + Double.toString(noiseResidual));
+			}
+			
+			
 			
 	    	}
 	    	
@@ -209,7 +297,87 @@ public class MainActivity extends Activity {
 	    		
 	    		break;
 	    		
+	    	case 33:
 	    		
+	    		//Log.d("file number", "FRC: " + Integer.toString(frameWrittenCounter));
+				if (writing) {
+					
+					Log.d("clicky", "we writes");
+
+					short[] received = (short[]) msg.obj;
+					
+					if (frameWrittenCounter == 0) {
+						
+						SimpleDateFormat s = new SimpleDateFormat("MMddyyyyhhmmss");
+						String format = s.format(new Date());
+						
+						fileNumber = sharedPrefs.getInt("file number", 0);
+						Log.d("file number", "FILE #: " + Integer.toString(fileNumber));
+						//output1 = new File(Environment.getExternalStorageDirectory().toString()
+								//+ "/samplesFromAndroidMic" + Integer.toString(fileNumber) + ".csv");
+						
+						output1 = new File(Environment.getExternalStorageDirectory().toString()
+								+ "/OEsample_" + format + ".csv");
+						try {
+							if (!output1.exists()) {
+								output1.createNewFile();
+							}
+							fw = new FileWriter(output1.getAbsoluteFile());
+							bw = new BufferedWriter(fw);
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
+					
+					
+					try {
+						for (int i = 0; i < received.length; i++) {
+							bw.write(Short.toString(received[i]));
+							bw.write(",");
+						}
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					
+					
+					
+					
+					
+					
+
+					frameWrittenCounter++;
+					
+					recordButton.setText(String.format("%.2f", 100.00*frameWrittenCounter/1200.00) + "%");
+
+					try {
+						if (frameWrittenCounter == 1200) {
+							Log.d("clicky", "STOP WRITING MAN");
+							bw.close();
+							writing = false;
+							frameWrittenCounter = 0;
+							
+							recordButton.setText("Record");
+							
+							if (fileNumber >= 32768) {
+								prefsEditor.putInt("file number", -1);
+								prefsEditor.commit();
+							}
+							
+							prefsEditor.putInt("file number", ++fileNumber);
+							prefsEditor.commit();
+							
+						}
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					
+					
+
+				}
+	    		break;
 	    	
 	    	default:	    	
 	    	}
@@ -450,9 +618,37 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);   
         
         a1 = new Audio(mHandler);
+        myAudioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
+        musicStreamMaxVolume = myAudioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+        
+        //IntentFilter receiverFilter = new IntentFilter(Intent.ACTION_HEADSET_PLUG);
+        //HeadsetStateReceiver receiver = new HeadsetStateReceiver();
+        //registerReceiver( receiver, receiverFilter );
 
+        sharedPrefs = getSharedPreferences("Test", Context.MODE_MULTI_PROCESS);
+        prefsEditor = sharedPrefs.edit();
+        prefsEditor.putInt("intTest", 987);
+        prefsEditor.commit();
+        
+        if(!sharedPrefs.contains("file number")){
+        	prefsEditor.putInt("file number", 0);
+        }
+        
+        //TODO: Don't do this in real life
+        prefsEditor.putInt("file number", 0);
+        
+        
+		recordButton = (Button) findViewById(R.id.button1);
+
+        
+        Context context = getApplicationContext();
+        int duration = Toast.LENGTH_SHORT;
+
+        Toast toast = Toast.makeText(context, Integer.toString(sharedPrefs.getInt("intTest", -1)), duration);
+        toast.show();
+        
         carText = (TextView) findViewById(R.id.textView3);
-		noiseText = (TextView) findViewById(R.id.textView4);
+		//noiseText = (TextView) findViewById(R.id.textView4);
 		
 		carText.setText("A");
 		carText.setText("B");

@@ -5,6 +5,9 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioRecord;
@@ -75,8 +78,7 @@ public class Audio extends Thread
         	
         	buffers = new short[1024][frameSize];
             int N = AudioRecord.getMinBufferSize(sampRate,AudioFormat.CHANNEL_IN_MONO,AudioFormat.ENCODING_PCM_16BIT);
-            Log.d("sampsize", "N: " + Integer.toString(N));
-            Log.d("sampsize", "frameSize: " + Integer.toString(frameSize));
+           
             recorder = new AudioRecord(AudioSource.MIC, sampRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, 10*N);
             //track = new AudioTrack(AudioManager.STREAM_MUSIC, sampRate, 
                     //AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT, 10*N, AudioTrack.MODE_STREAM);
@@ -89,6 +91,7 @@ public class Audio extends Thread
              * Reads the data from the recorder and writes it to the audio track for playback.
              */
             
+            /*
             File output1 = new File(Environment.getExternalStorageDirectory().toString()+"/samplesFromAndroidMic.csv");
 			if (!output1.exists()) {
 				output1.createNewFile();
@@ -96,6 +99,8 @@ public class Audio extends Thread
  
 			FileWriter fw = new FileWriter(output1.getAbsoluteFile());
 			BufferedWriter bw = new BufferedWriter(fw);
+            */
+            
             
             while(!stopped)
             { 
@@ -106,15 +111,16 @@ public class Audio extends Thread
                 //track.write(buffer, 0, buffer.length);
             	
             	
-            	
     			//int x = 0;
                 
-                //while(x<100){
+               // while(x<400){
                 
             	
             	short[] buffer1 = buffers[ix++ % buffers.length];
             	N = recorder.read(buffer1, 0,buffer1.length);
             	//track.write(buffer1, 0, buffer1.length);
+            	
+            	
             	
             	/*
             	for(int i =0; i < buffer1.length; i++)
@@ -134,7 +140,8 @@ public class Audio extends Thread
                 	bw.write(Short.toString(buffer2[i]));
                 	bw.write(",");
                 }
-            	*/
+                */
+            	
             	
             	short[] buffer3 = buffers[ix++ % buffers.length];
             	N = recorder.read(buffer3, 0,buffer3.length);
@@ -148,8 +155,8 @@ public class Audio extends Thread
                 }
                 */
             	
-            	short[] buffer4 = buffers[ix++ % buffers.length];
-            	N = recorder.read(buffer4, 0,buffer4.length);
+            	//short[] buffer4 = buffers[ix++ % buffers.length];
+            	//N = recorder.read(buffer4, 0,buffer4.length);
             	//track.write(buffer4, 0, buffer4.length);
             	
             	/*
@@ -160,8 +167,8 @@ public class Audio extends Thread
                 }
                 */
             	
-            	short[] buffer5 = buffers[ix++ % buffers.length];
-            	N = recorder.read(buffer5, 0,buffer5.length);
+            	//short[] buffer5 = buffers[ix++ % buffers.length];
+            	//N = recorder.read(buffer5, 0,buffer5.length);
             	//track.write(buffer5, 0, buffer5.length);
             	
             	/*
@@ -172,8 +179,8 @@ public class Audio extends Thread
                 }
                 */
             	
-            	short[] buffer6 = buffers[ix++ % buffers.length];
-            	N = recorder.read(buffer6, 0,buffer6.length);
+            	//short[] buffer6 = buffers[ix++ % buffers.length];
+            	//N = recorder.read(buffer6, 0,buffer6.length);
             	//track.write(buffer5, 0, buffer5.length);
             	
             	/*
@@ -184,8 +191,8 @@ public class Audio extends Thread
                 }
                 */
             	
-            	short[] buffer7 = buffers[ix++ % buffers.length];
-            	N = recorder.read(buffer7, 0,buffer7.length);
+            	//short[] buffer7 = buffers[ix++ % buffers.length];
+            	//N = recorder.read(buffer7, 0,buffer7.length);
             	//track.write(buffer5, 0, buffer5.length);
             	
             	/*
@@ -196,8 +203,8 @@ public class Audio extends Thread
                 }
                 */
             	
-            	short[] buffer8 = buffers[ix++ % buffers.length];
-            	N = recorder.read(buffer8, 0,buffer8.length);
+            	//short[] buffer8 = buffers[ix++ % buffers.length];
+            	//N = recorder.read(buffer8, 0,buffer8.length);
             	//track.write(buffer5, 0, buffer5.length);
             	
             	/*
@@ -208,6 +215,8 @@ public class Audio extends Thread
                 }
                 */
             	
+         
+            	
             	//x++;
             	
                 //}
@@ -215,7 +224,7 @@ public class Audio extends Thread
                 
                 //stopped = true;
                 
-            	
+            	// commenting out the messages just in recording mode
                 
                //int counter=0;
                 
@@ -226,8 +235,6 @@ public class Audio extends Thread
             	   //data[i]=bufferData[i];
                //}
                
-               Log.d("buffer", "length: " + Double.toString(bufferData.length));
-               Log.d("buffer", "frameSize: " + Double.toString(frameSize));
                
                //TODO: Remove hard codes below for frame size and hamming
                double[] windowed = hamming(bufferData.length, bufferData);
@@ -235,9 +242,15 @@ public class Audio extends Thread
                double[] spectrum = doSpectrum(fftwavlet);
                mainHandler.obtainMessage(1, bufferData.length, -1, windowed).sendToTarget();
                mainHandler.obtainMessage(0, sampRate, -1, spectrum).sendToTarget();
+               mainHandler.obtainMessage(33, buffer1).sendToTarget();
+               mainHandler.obtainMessage(33, buffer2).sendToTarget();
+               mainHandler.obtainMessage(33, buffer3).sendToTarget();
                //counter++;
                //if(counter==6) counter=0;
                //}
+                 
+               
+                
                 
                 
             }
@@ -272,7 +285,6 @@ public class Audio extends Thread
     	for(int i = 0; i < input.length; i++)
     	{
     		output[i] = (double) input[i]/32768.0;
-    		//Log.d("spectrum", Double.toString(output[i]));
     	}
     	return output;
     }

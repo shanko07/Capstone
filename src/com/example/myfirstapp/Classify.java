@@ -35,8 +35,8 @@ public class Classify {
 		
 		//Car class
 		case 0: 
-			dictionaryPath = Environment.getExternalStorageDirectory().toString()+"/carA.csv";
-			trainingPath = Environment.getExternalStorageDirectory().toString()+"/carY.csv";
+			dictionaryPath = Environment.getExternalStorageDirectory().toString()+"/busch_carsA.csv";
+			trainingPath = Environment.getExternalStorageDirectory().toString()+"/busch_carsY.csv";
 			Y = new double[6][40];
 			A = new double[40][120];
 			break;
