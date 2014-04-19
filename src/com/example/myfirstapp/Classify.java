@@ -25,28 +25,38 @@ public class Classify {
 	public Classify(int t0, int fileForDictandTrain){
 		T0=t0; //Initialize T0
 		
+		Y = new double[6][40];
+		A = new double[40][120];
+		
 /* FILE READING FROM CSVs which contain training and dictionary matrices */
 		
 		
 		//Initialize the file paths for all classes
 		switch(fileForDictandTrain){
 		
+		
 		//TODO: Remove the hard coding of sizes and perhaps use a container or iterator of some kind
+		//TODO: Add or remove classes as necessary
 		
 		//Car class
 		case 0: 
-			dictionaryPath = Environment.getExternalStorageDirectory().toString()+"/busch_carsA.csv";
-			trainingPath = Environment.getExternalStorageDirectory().toString()+"/busch_carsY.csv";
-			Y = new double[6][40];
-			A = new double[40][120];
+			dictionaryPath = Environment.getExternalStorageDirectory().toString()+"/carA.csv";
+			trainingPath = Environment.getExternalStorageDirectory().toString()+"/carY.csv";
+			
 			break;
 		
-		//Silence class
+		//Ambient Outdoor class
 		case 1:
-			dictionaryPath = Environment.getExternalStorageDirectory().toString()+"/silent_aptA.csv";
-			trainingPath = Environment.getExternalStorageDirectory().toString()+"/silent_aptY.csv";
-			Y = new double[6][40];
-			A = new double[40][120];
+			dictionaryPath = Environment.getExternalStorageDirectory().toString()+"/ambientA.csv";
+			trainingPath = Environment.getExternalStorageDirectory().toString()+"/ambientY.csv";
+			
+			break;
+			
+		//Talking class
+		case 2:
+			dictionaryPath = Environment.getExternalStorageDirectory().toString()+"/talkingA.csv";
+			trainingPath = Environment.getExternalStorageDirectory().toString()+"/talkingY.csv";
+						
 			break;
 		}
 		

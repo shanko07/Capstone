@@ -24,15 +24,21 @@ public class WavProcessing {
 	int bitsPerSample;
 	int samplingRate;
 	
-	WavProcessing(String filepath, boolean isread){
+	WavProcessing(String filepath, boolean isread) throws IOException{
 		filePath = filepath;
 		isRead = isread;
-		try {
+		
+			/*
+			File testFile = new File(filepath);
+			if(!testFile.exists()){
+				testFile.mkdirs();
+				testFile.createNewFile();
+			}
+			*/
+			
 			file = new RandomAccessFile(filePath, "rw");
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+			//file = new RandomAccessFile(testFile, "rw");
+		
 		
 		if(isRead){
 			//TODO: This is a stub we should do something for reading stuffs

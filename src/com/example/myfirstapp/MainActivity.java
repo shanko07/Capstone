@@ -97,17 +97,24 @@ public class MainActivity extends Activity {
 	GraphViewData[] gViewData;
 	
 	/* Classifier Variables */
-	double[][] pastResidual = new double[2][10];  //2 classes, 2 values of previous results
+	double[][] pastResidual = new double[3][10];  //3 classes, 10 values of previous results
 	//TODO: Finish this ^ ^ 
 	TextView carText;
-	TextView noiseText;
+	TextView ambientText;
 	double carResidual;
-	double noiseResidual;
+	double ambientResidual;
+	double talkingResidual;
+	
 	final double[][]  blah = new double[6][1];
+	
+	//TODO: IF there is an error it's because you set them all to car for testing purposes..  Fix it!
 	//Car class arg1=0
 	final Classify car = new Classify(3, 0);
-	//Noise class arg1=1
-	final Classify noise = new Classify(3, 1);
+	//ambient class arg1=1
+	final Classify ambient = new Classify(3, 1);
+	//Talking Class arg=2
+	final Classify talking = new Classify(3, 2);
+	
 	int testimer = 0;
 	int ringBuffer = 0;
 	WavProcessing wavProcessor;
@@ -212,7 +219,7 @@ public class MainActivity extends Activity {
 	    	calculateSpectralEntropy();
 	    	calculateSpectralFlux();
 	    	
-	    	//Run the KOMP algorithm on the current feature and obtain the residual based on classification with noise and car dictionaries
+	    	//Run the KOMP algorithm on the current feature and obtain the residual based on classification with ambient and car dictionaries
 	    	if(prevSpectrum!=null){
 	    	
 	    	blah[0][0] = rmsAmplitude;
@@ -223,13 +230,16 @@ public class MainActivity extends Activity {
 	    	blah[5][0] = spectralFlux;
 	    	
 			carResidual = car.classify(blah);
-			noiseResidual = noise.classify(blah);
+			ambientResidual = ambient.classify(blah);
+			talkingResidual = talking.classify(blah);
 			
 			pastResidual[0][ringBuffer] = carResidual;
-			pastResidual[1][ringBuffer] = noiseResidual;
+			pastResidual[1][ringBuffer] = ambientResidual;
+			pastResidual[2][ringBuffer] = talkingResidual;
 			
 			Log.d("residual", "car: " + Double.toString(carResidual));
-			Log.d("residual", "silence: " + Double.toString(noiseResidual));
+			Log.d("residual", "ambient: " + Double.toString(ambientResidual));
+			Log.d("residual", "talking: " + Double.toString(talkingResidual));
 			
 			ringBuffer++;
 			if(ringBuffer == 10) ringBuffer = 0;
@@ -237,63 +247,16 @@ public class MainActivity extends Activity {
 			int carMatch = 0;
 			
 			for(int i = 0; i<pastResidual[0].length; i++){
-				if(pastResidual[0][i] < pastResidual[1][i] && pastResidual[0][i] < .1){
+				if(pastResidual[0][i] < pastResidual[1][i] && pastResidual[0][i] < pastResidual[2][i]){
 					carMatch++;
 				}
 			}
 			
-			/*
-			int spree = 0;
-			int maxSpree = 0;
-			boolean broken = false;
-			for(int i = 0; i<pastResidual[0].length; i++){
-				if(broken){
-					broken = false;
-					if(spree>maxSpree){
-						maxSpree = spree;
-					}
-				}
-				if(pastResidual[0][i] < pastResidual[1][i] && pastResidual[0][i] < .1){
-					spree++;
-				}
-				else{
-					broken = true;
-				}
-			}
-			*/
 			
-			
-			/*
-			if(carResidual < noiseResidual){
-				
-				carText.setText("Car"); Log.d("first order classifier", "Car");
-				Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-				 // Vibrate for 500 milliseconds
-				 v.vibrate(100);
-			}
-			else {carText.setText(""); Log.d("first order classifier", "xxxxxxxx");}
-			*/
 			
 			musicStreamCurrentVolume = myAudioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
 			
-			/*
-			if(maxSpree >= 4){
-				
-				carText.setTextColor(Color.RED);
-				carText.setBackgroundColor(Color.BLACK);
-				carText.setText("Car"); Log.d("first order classifier", "Car");
-				Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-				 // Vibrate for 100 milliseconds
-				 v.vibrate(50);
-				 myAudioManager.setStreamMute(AudioManager.STREAM_MUSIC, true);
-				 
-			}
-			else {carText.setBackgroundColor(Color.WHITE); carText.setText(""); Log.d("first order classifier", "xxxxxxxx");
 			
-			myAudioManager.setStreamMute(AudioManager.STREAM_MUSIC, false);
-			
-			}
-			*/
 			
 			
 			if(carMatch >= 5){
@@ -326,7 +289,7 @@ public class MainActivity extends Activity {
 	    		timeDomain = (double[]) msg.obj;
 	    		N = msg.arg1;
 	    		
-	    		//noiseText.setText(Double.toString(noiseResidual));
+	    		//ambientText.setText(Double.toString(ambientResidual));
 	    		
 	    		/* Calculate time domain features */
 	    		calculateRMSAmplitude();
@@ -356,8 +319,13 @@ public class MainActivity extends Activity {
 						output1 = new File(Environment.getExternalStorageDirectory().toString()
 								+ "/OEsample_" + format + ".csv");
 						
-						wavProcessor = new WavProcessing(Environment.getExternalStorageDirectory().toString()
-								+ "/OEsample_" + format + ".wav", false);
+						try {
+							wavProcessor = new WavProcessing(Environment.getExternalStorageDirectory().toString()
+									+ "/OEsample_" + format + ".wav", false);
+						} catch (IOException e2) {
+							// TODO Auto-generated catch block
+							e2.printStackTrace();
+						}
 						
 						try {
 							wavProcessor.writeHeader(1, sampRate, 16);
@@ -437,14 +405,14 @@ public class MainActivity extends Activity {
 	    	default:	    	
 	    	}
 	    	//carText.setText(Integer.toString(testimer));
-			//noiseText.setText(Integer.toString(testimer));
+			//ambientText.setText(Integer.toString(testimer));
 	    }	
 	};
 	
 	/*
 	private void setStuff(double d, double e){
 		carText.setText(Double.toString(d));
-		noiseText.setText(Double.toString(e));
+		ambientText.setText(Double.toString(e));
 	}
 	*/
 	   
@@ -705,7 +673,7 @@ public class MainActivity extends Activity {
         //toast.show();
         
         carText = (TextView) findViewById(R.id.textView3);
-		//noiseText = (TextView) findViewById(R.id.textView4);
+		//ambientText = (TextView) findViewById(R.id.textView4);
 		
 		//carText.setText("A");
 		//carText.setText("B");
