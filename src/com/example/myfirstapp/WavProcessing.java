@@ -46,7 +46,7 @@ public class WavProcessing {
 		
 	}
 	
-	private void writeHeader(int channels, int samplingrate, int bitspersample) throws IOException{
+	public void writeHeader(int channels, int samplingrate, int bitspersample) throws IOException{
 		
 		numberOfChannels = channels;
 		bitsPerSample = bitspersample;
@@ -100,7 +100,7 @@ public class WavProcessing {
 	}
 	
 	
-	private boolean writeBlock(byte[] block) throws IOException{
+	public boolean writeBlock(byte[] block) throws IOException{
 		if(block.length != blockAlign){
 			return false;
 		}
@@ -112,7 +112,18 @@ public class WavProcessing {
 	}
 	
 	
-	private void finalizeWrite(long numberOfsamples) throws IOException{
+	public void writeShort(short twoBytes) throws IOException{
+		
+		byte a = (byte) (twoBytes & 0xFF);
+		byte b = (byte) ((twoBytes & 0xFF00) >> 8);
+		
+		byte[]x = {a,b};
+		
+		file.write(x);
+		
+	}
+	
+	public void finalizeWrite(long numberOfsamples) throws IOException{
 		numberOfSamples = numberOfsamples;
 		
 		subChunk2Size = numberOfSamples*numberOfChannels*bitsPerSample/8;
@@ -132,7 +143,9 @@ public class WavProcessing {
 		a = (int) (subChunk2Size & 0xFF);  b = (int) ((subChunk2Size & 0xFF00) >> 8);  
 		c = (int) ((subChunk2Size & 0xFF0000) >> 16);  d = (int) ((subChunk2Size & 0xFF000000) >> 24);
 		
+		file.write(a);file.write(b);file.write(c);file.write(d);
 		
+		file.close();
 		
 	}
 	

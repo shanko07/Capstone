@@ -30,17 +30,35 @@
         android:layout_height="wrap_content"
         android:layout_alignParentLeft="true"
         android:layout_below="@+id/textView1"
-        android:text="TextView"
+        android:text=" "
         android:textSize="60dp" />
+
+    <SeekBar
+        android:id="@+id/seekBar1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@+id/button1"
+        android:layout_toLeftOf="@+id/button1" />
 
     <Button
         android:id="@+id/button1"
-        android:onClick="recordClickListener"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/textView3"
-        android:layout_marginTop="142dp"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="14dp"
         android:layout_toRightOf="@+id/textView1"
+        android:onClick="recordClickListener"
         android:text="Record" />
+
+    <CheckBox
+        android:id="@+id/checkBox1"
+        android:onClick="detectionState"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/seekBar1"
+        android:layout_alignRight="@+id/button1"
+        android:layout_marginBottom="16dp"
+        android:text="Detection On"
+        android:textSize="20dp" />
   
 </RelativeLayout>

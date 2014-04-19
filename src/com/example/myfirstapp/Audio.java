@@ -71,7 +71,7 @@ public class Audio extends Thread
         	
         	//use the highest sampling rate available.  TODO: we may need to change this to the highest rate below 44100 for computational savings
         	int sampRate = supportedRates[numSupportedRates-1-2];
-        	sampRate = 16000;
+        	sampRate = 16000;  //TODO: don't hard code this
         	//sampRate*50mS = sample size for time domain and DFT
         	//inmpose a 50mS frame size and based on the sampling rate calculate the frame size in samples
         	int frameSize = (int) Math.ceil(sampRate*.025);
@@ -274,7 +274,7 @@ public class Audio extends Thread
     /**
      * Called from outside of the thread in order to stop the recording/playback loop
      */
-    private void close()
+    protected void close()
     { 
          stopped = true;
     }

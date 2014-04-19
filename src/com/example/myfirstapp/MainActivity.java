@@ -10,7 +10,10 @@ import android.view.Menu;
 //package com.android.audiorecordtest;
 
 import android.view.ViewGroup;
+import android.widget.CheckBox;
 import android.widget.LinearLayout;
+import android.widget.SeekBar;
+import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.os.Environment;
@@ -107,14 +110,48 @@ public class MainActivity extends Activity {
 	final Classify noise = new Classify(3, 1);
 	int testimer = 0;
 	int ringBuffer = 0;
+	WavProcessing wavProcessor;
+	SeekBar recordingDuartionBar;
+	int framesToWriteToWav = 0;
+	CheckBox detectionToggle;
+	boolean detectionState = true;
 	
 	
 	
 	
 	public void recordClickListener(View view) {
 		Log.d("clicky", "we clicked it");
-		if(!writing){
+		if(!writing && detectionState){
 			writing = true;
+		}
+	}
+	
+	public void setRecordTime(int seconds){
+		framesToWriteToWav = (int) Math.ceil(sampRate*seconds/N);
+		Log.d("wavLength", Integer.toString(framesToWriteToWav));
+	}
+	
+	public void detectionState(View view){
+		Log.d("detection", "we're in the onclick");
+		if(detectionToggle.isChecked()){
+			if(detectionState){
+				//Want to detect and detecting..do nothing
+			}
+			else{
+				//Want to detect and not detecting..start the thread
+				a1 = new Audio(mHandler);
+				detectionState = true;
+			}
+		}
+		else{
+			if(detectionState){
+				//Want to stop detecting and detecting..stop thread
+				a1.close();
+				detectionState = false;
+			}
+			else{
+				//Want to stop detecting and not detecting..do nothing
+			}
 		}
 	}
 	
@@ -262,7 +299,7 @@ public class MainActivity extends Activity {
 			if(carMatch >= 5){
 				
 				carText.setTextColor(Color.RED);
-				carText.setBackgroundColor(Color.BLACK);
+				
 				carText.setText("Car"); Log.d("first order classifier", "Car");
 				Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
 				 // Vibrate for 100 milliseconds
@@ -270,7 +307,7 @@ public class MainActivity extends Activity {
 				 myAudioManager.setStreamMute(AudioManager.STREAM_MUSIC, true);
 				 
 			}
-			else {carText.setBackgroundColor(Color.WHITE); carText.setText(""); Log.d("first order classifier", "xxxxxxxx");
+			else { carText.setText(""); Log.d("first order classifier", "xxxxxxxx");
 			
 			myAudioManager.setStreamMute(AudioManager.STREAM_MUSIC, false);
 			
@@ -318,6 +355,20 @@ public class MainActivity extends Activity {
 						
 						output1 = new File(Environment.getExternalStorageDirectory().toString()
 								+ "/OEsample_" + format + ".csv");
+						
+						wavProcessor = new WavProcessing(Environment.getExternalStorageDirectory().toString()
+								+ "/OEsample_" + format + ".wav", false);
+						
+						try {
+							wavProcessor.writeHeader(1, sampRate, 16);
+						} catch (IOException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+						
+						
+						
+						
 						try {
 							if (!output1.exists()) {
 								output1.createNewFile();
@@ -335,6 +386,7 @@ public class MainActivity extends Activity {
 						for (int i = 0; i < received.length; i++) {
 							bw.write(Short.toString(received[i]));
 							bw.write(",");
+							wavProcessor.writeShort(received[i]);
 						}
 					} catch (IOException e) {
 						// TODO Auto-generated catch block
@@ -349,14 +401,17 @@ public class MainActivity extends Activity {
 
 					frameWrittenCounter++;
 					
-					recordButton.setText(String.format("%.2f", 100.00*frameWrittenCounter/1200.00) + "%");
+					recordButton.setText(String.format("%.2f", 100.00*frameWrittenCounter/(double) framesToWriteToWav) + "%");
 
 					try {
-						if (frameWrittenCounter == 1200) {
+						if (frameWrittenCounter == framesToWriteToWav) {
+							
+							wavProcessor.finalizeWrite(frameWrittenCounter*received.length);
 							Log.d("clicky", "STOP WRITING MAN");
 							bw.close();
 							writing = false;
 							frameWrittenCounter = 0;
+							
 							
 							recordButton.setText("Record");
 							
@@ -637,22 +692,52 @@ public class MainActivity extends Activity {
         //TODO: Don't do this in real life
         prefsEditor.putInt("file number", 0);
         
-        
+    
 		recordButton = (Button) findViewById(R.id.button1);
+		detectionToggle = (CheckBox) findViewById(R.id.checkBox1);
+		detectionToggle.setChecked(true);
 
         
-        Context context = getApplicationContext();
-        int duration = Toast.LENGTH_SHORT;
+        //Context context = getApplicationContext();
+        //int duration = Toast.LENGTH_SHORT;
 
-        Toast toast = Toast.makeText(context, Integer.toString(sharedPrefs.getInt("intTest", -1)), duration);
-        toast.show();
+        //Toast toast = Toast.makeText(context, Integer.toString(sharedPrefs.getInt("intTest", -1)), duration);
+        //toast.show();
         
         carText = (TextView) findViewById(R.id.textView3);
 		//noiseText = (TextView) findViewById(R.id.textView4);
 		
-		carText.setText("A");
-		carText.setText("B");
-		carText.setText("c");
+		//carText.setText("A");
+		//carText.setText("B");
+		//carText.setText("c");
+		
+		
+		recordingDuartionBar = (SeekBar) findViewById(R.id.seekBar1);
+		recordingDuartionBar.setMax(120);
+
+		recordingDuartionBar.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
+			public void onProgressChanged(SeekBar seekBar, int progress,
+					boolean fromUser) {
+				// TODO Auto-generated method stub
+				
+				if(!writing){
+				recordButton.setText(progress + "seconds");
+				setRecordTime(progress);
+				}
+				
+			}
+
+			public void onStartTrackingTouch(SeekBar seekBar) {
+				// TODO Auto-generated method stub
+			}
+
+			public void onStopTrackingTouch(SeekBar seekBar) {
+				// TODO Auto-generated method stub
+			}
+		});
+        
+        
+        
         //LinearLayout ll = new LinearLayout(this);
         /*
         mRecordButton = new RecordButton(this);
