@@ -40,15 +40,19 @@ public class Classify {
 		
 		//Car class
 		case 0: 
-			dictionaryPath = Environment.getExternalStorageDirectory().toString()+"/carA.csv";
-			trainingPath = Environment.getExternalStorageDirectory().toString()+"/carY.csv";
+			//dictionaryPath = Environment.getExternalStorageDirectory().toString()+"/carA.csv";
+			//trainingPath = Environment.getExternalStorageDirectory().toString()+"/carY.csv";
+			dictionaryPath = Environment.getExternalStorageDirectory().toString()+"/LCC_carA.csv";
+			trainingPath = Environment.getExternalStorageDirectory().toString()+"/LCC_carY.csv";
 			
 			break;
 		
 		//Ambient Outdoor class
 		case 1:
-			dictionaryPath = Environment.getExternalStorageDirectory().toString()+"/ambientA.csv";
-			trainingPath = Environment.getExternalStorageDirectory().toString()+"/ambientY.csv";
+			//dictionaryPath = Environment.getExternalStorageDirectory().toString()+"/ambientA.csv";
+			//trainingPath = Environment.getExternalStorageDirectory().toString()+"/ambientY.csv";
+			dictionaryPath = Environment.getExternalStorageDirectory().toString()+"/LCC_conversationA.csv";
+			trainingPath = Environment.getExternalStorageDirectory().toString()+"/LCC_conversationY.csv";
 			
 			break;
 			

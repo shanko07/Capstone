@@ -115,9 +115,9 @@ public class MainActivity extends Activity {
 	//ambient class arg1=1
 	final Classify ambient = new Classify(3, 1);
 	//Talking Class arg=2
-	final Classify talking = new Classify(3, 2);
+	//final Classify talking = new Classify(3, 2);
 	//Talking Class arg=3
-	final Classify crowdNoise = new Classify(3, 3);
+	//final Classify crowdNoise = new Classify(3, 3);
 	
 	int testimer = 0;
 	int ringBuffer = 0;
@@ -244,18 +244,18 @@ public class MainActivity extends Activity {
 	    	
 			carResidual = car.classify(blah);
 			ambientResidual = ambient.classify(blah);
-			talkingResidual = talking.classify(blah);
-			crowdNoiseResidual = crowdNoise.classify(blah);
+			//talkingResidual = talking.classify(blah);
+			//crowdNoiseResidual = crowdNoise.classify(blah);
 			
 			pastResidual[0][ringBuffer] = carResidual;
 			pastResidual[1][ringBuffer] = ambientResidual;
-			pastResidual[2][ringBuffer] = talkingResidual;
-			pastResidual[3][ringBuffer] = crowdNoiseResidual;
+			//pastResidual[2][ringBuffer] = talkingResidual;
+			//pastResidual[3][ringBuffer] = crowdNoiseResidual;
 			
 			Log.d("residual", "car: " + Double.toString(carResidual));
 			Log.d("residual", "ambient: " + Double.toString(ambientResidual));
-			Log.d("residual", "talking: " + Double.toString(talkingResidual));
-			Log.d("residual", "crowd noise: " + Double.toString(crowdNoiseResidual));
+			//Log.d("residual", "talking: " + Double.toString(talkingResidual));
+			//Log.d("residual", "crowd noise: " + Double.toString(crowdNoiseResidual));
 			
 			ringBuffer++;
 			if(ringBuffer == 10) ringBuffer = 0;
@@ -267,8 +267,8 @@ public class MainActivity extends Activity {
 				int carMatch = 0;
 				for (int i = 0; i < pastResidual[0].length; i++) {
 					if (pastResidual[0][i] < pastResidual[1][i]
-							&& pastResidual[0][i] < pastResidual[2][i]
-							&& pastResidual[0][i] < pastResidual[3][i]		
+							//&& pastResidual[0][i] < pastResidual[2][i]
+							//&& pastResidual[0][i] < pastResidual[3][i]		
 							&& pastResidual[0][i] < carMinResidual) {
 						carMatch++;
 					}
