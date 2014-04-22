@@ -58,6 +58,12 @@ public class Classify {
 			trainingPath = Environment.getExternalStorageDirectory().toString()+"/talkingY.csv";
 						
 			break;
+			
+		case 3:
+			dictionaryPath = Environment.getExternalStorageDirectory().toString()+"/LCC_conversationA.csv";
+			trainingPath = Environment.getExternalStorageDirectory().toString()+"/LCC_conversationY.csv";
+			
+			break;
 		}
 		
         

@@ -41,6 +41,7 @@ import java.nio.Buffer;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.Date;
+import java.util.TimerTask;
 
 import com.jjoe64.graphview.BarGraphView;
 import com.jjoe64.graphview.GraphView;
@@ -97,13 +98,14 @@ public class MainActivity extends Activity {
 	GraphViewData[] gViewData;
 	
 	/* Classifier Variables */
-	double[][] pastResidual = new double[3][10];  //3 classes, 10 values of previous results
+	double[][] pastResidual = new double[4][10];  //4 classes, 10 values of previous results
 	//TODO: Finish this ^ ^ 
 	TextView carText;
 	TextView ambientText;
 	double carResidual;
 	double ambientResidual;
 	double talkingResidual;
+	double crowdNoiseResidual;
 	
 	final double[][]  blah = new double[6][1];
 	
@@ -114,6 +116,8 @@ public class MainActivity extends Activity {
 	final Classify ambient = new Classify(3, 1);
 	//Talking Class arg=2
 	final Classify talking = new Classify(3, 2);
+	//Talking Class arg=3
+	final Classify crowdNoise = new Classify(3, 3);
 	
 	int testimer = 0;
 	int ringBuffer = 0;
@@ -122,6 +126,15 @@ public class MainActivity extends Activity {
 	int framesToWriteToWav = 0;
 	CheckBox detectionToggle;
 	boolean detectionState = true;
+	
+	SeekBar sensitivityBar;
+	
+	double carMinResidual;
+	TextView carResidualText;
+	
+	boolean isCarDetectedRecently = false;
+	long trueTime;
+	boolean isMuted = false;
 	
 	
 	
@@ -232,50 +245,87 @@ public class MainActivity extends Activity {
 			carResidual = car.classify(blah);
 			ambientResidual = ambient.classify(blah);
 			talkingResidual = talking.classify(blah);
+			crowdNoiseResidual = crowdNoise.classify(blah);
 			
 			pastResidual[0][ringBuffer] = carResidual;
 			pastResidual[1][ringBuffer] = ambientResidual;
 			pastResidual[2][ringBuffer] = talkingResidual;
+			pastResidual[3][ringBuffer] = crowdNoiseResidual;
 			
 			Log.d("residual", "car: " + Double.toString(carResidual));
 			Log.d("residual", "ambient: " + Double.toString(ambientResidual));
 			Log.d("residual", "talking: " + Double.toString(talkingResidual));
+			Log.d("residual", "crowd noise: " + Double.toString(crowdNoiseResidual));
 			
 			ringBuffer++;
 			if(ringBuffer == 10) ringBuffer = 0;
 			
-			int carMatch = 0;
 			
-			for(int i = 0; i<pastResidual[0].length; i++){
-				if(pastResidual[0][i] < pastResidual[1][i] && pastResidual[0][i] < pastResidual[2][i]){
-					carMatch++;
+			if(!isCarDetectedRecently || (System.currentTimeMillis() - trueTime) > 1000){
+			
+			if (ringBuffer % 5 == 0) {
+				int carMatch = 0;
+				for (int i = 0; i < pastResidual[0].length; i++) {
+					if (pastResidual[0][i] < pastResidual[1][i]
+							&& pastResidual[0][i] < pastResidual[2][i]
+							&& pastResidual[0][i] < pastResidual[3][i]		
+							&& pastResidual[0][i] < carMinResidual) {
+						carMatch++;
+					}
+				}
+				musicStreamCurrentVolume = myAudioManager
+						.getStreamVolume(AudioManager.STREAM_MUSIC);
+				if (carMatch >= 5) {
+					
+					trueTime = System.currentTimeMillis();
+					isCarDetectedRecently = true;
+					Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+					// Vibrate for 100 milliseconds
+					v.vibrate(100);
+					/*
+					carText.setTextColor(Color.RED);
+					carText.setText("Car");
+					Log.d("first order classifier", "Car");
+					Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+					// Vibrate for 100 milliseconds
+					v.vibrate(100);
+					myAudioManager.setStreamMute(AudioManager.STREAM_MUSIC,
+							true);
+					*/
+					//myAudioManager.setStreamMute(AudioManager.STREAM_MUSIC,true);
+
+				} else {
+					
+					isCarDetectedRecently = false;
+					
+					
+					carText.setText("");
+					Log.d("first order classifier", "xxxxxxxx");
+					
+					if(isMuted){
+					myAudioManager.setStreamMute(AudioManager.STREAM_MUSIC,
+							false);
+					isMuted = false;
+					}
+
 				}
 			}
+			}
 			
-			
-			
-			musicStreamCurrentVolume = myAudioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
-			
-			
-			
-			
-			if(carMatch >= 5){
+			else{
 				
 				carText.setTextColor(Color.RED);
+				carText.setText("Car");
+				Log.d("first order classifier", "Car");
 				
-				carText.setText("Car"); Log.d("first order classifier", "Car");
-				Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-				 // Vibrate for 100 milliseconds
-				 v.vibrate(100);
-				 myAudioManager.setStreamMute(AudioManager.STREAM_MUSIC, true);
-				 
+				
+				if(!isMuted){
+				myAudioManager.setStreamMute(AudioManager.STREAM_MUSIC,
+						true);
+				isMuted = true;
+				}
+				
 			}
-			else { carText.setText(""); Log.d("first order classifier", "xxxxxxxx");
-			
-			myAudioManager.setStreamMute(AudioManager.STREAM_MUSIC, false);
-			
-			}
-			
 			
 			
 	    	}
@@ -674,6 +724,7 @@ public class MainActivity extends Activity {
         
         carText = (TextView) findViewById(R.id.textView3);
 		//ambientText = (TextView) findViewById(R.id.textView4);
+        carResidualText = (TextView) findViewById(R.id.textView2);
 		
 		//carText.setText("A");
 		//carText.setText("B");
@@ -703,7 +754,34 @@ public class MainActivity extends Activity {
 				// TODO Auto-generated method stub
 			}
 		});
-        
+		
+		
+		sensitivityBar = (SeekBar) findViewById(R.id.seekBar2);
+		sensitivityBar.setMax(100);
+
+		sensitivityBar.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
+			public void onProgressChanged(SeekBar seekBar, int progress,
+					boolean fromUser) {
+				// TODO Auto-generated method stub
+				//seems as if the
+				carMinResidual = (double) progress/5000.00;
+				carResidualText.setText(Double.toString(carMinResidual));
+				//setRecordTime(progress);
+				
+				
+			}
+
+			public void onStartTrackingTouch(SeekBar seekBar) {
+				// TODO Auto-generated method stub
+			}
+
+			public void onStopTrackingTouch(SeekBar seekBar) {
+				// TODO Auto-generated method stub
+			}
+		});
+		
+		
+		
         
         
         //LinearLayout ll = new LinearLayout(this);

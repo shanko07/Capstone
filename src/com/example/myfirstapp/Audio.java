@@ -71,7 +71,7 @@ public class Audio extends Thread
         	
         	//use the highest sampling rate available.  TODO: we may need to change this to the highest rate below 44100 for computational savings
         	int sampRate = supportedRates[numSupportedRates-1-2];
-        	sampRate = 16000;  //TODO: don't hard code this
+        	//sampRate = 16000;  //TODO: don't hard code this
         	//sampRate*50mS = sample size for time domain and DFT
         	//inmpose a 50mS frame size and based on the sampling rate calculate the frame size in samples
         	int frameSize = (int) Math.ceil(sampRate*.025);
@@ -79,7 +79,7 @@ public class Audio extends Thread
         	buffers = new short[1024][frameSize];
             int N = AudioRecord.getMinBufferSize(sampRate,AudioFormat.CHANNEL_IN_MONO,AudioFormat.ENCODING_PCM_16BIT);
            
-            recorder = new AudioRecord(AudioSource.MIC, sampRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, 10*N);
+            recorder = new AudioRecord(AudioSource.MIC, sampRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, 20*N);
             //track = new AudioTrack(AudioManager.STREAM_MUSIC, sampRate, 
                     //AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT, 10*N, AudioTrack.MODE_STREAM);
             recorder.startRecording();
