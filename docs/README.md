@@ -1,6 +1,6 @@
 ## Check out the links for more info
 
-<object data="Open-Ears-poster.pdf" type="application/pdf" width="700px" height="700px">
+<object data="Open-Ears-poster.pdf" type="application/pdf" width="700px" height="600px">
     <embed src="Open-Ears-poster.pdf">
         <a href="Open-Ears-poster.pdf">Poster</a>
         <p></p>
