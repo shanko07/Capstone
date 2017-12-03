@@ -1,4 +1,6 @@
-## Check out our [capstone video](https://www.youtube.com/watch?v=reEQYWBglns)
+## Check out the links for more info
+
+[Demo](https://www.youtube.com/watch?v=reEQYWBglns)
 
 [Poster](Open-Ears-poster.pdf)
 
