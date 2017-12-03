@@ -6,10 +6,10 @@
     </embed>
 </object>
 
-<embed width="420" height="315"
-src="https://www.youtube.com/watch?v=reEQYWBglns">
+<object width="420" height="315"
+data="https://www.youtube.com/watch?v=reEQYWBglns">
         <a href="https://www.youtube.com/watch?v=reEQYWBglns">Capstone Demo</a>
-</embed>
+</object>
 
 [Demo](https://www.youtube.com/watch?v=reEQYWBglns)
 
